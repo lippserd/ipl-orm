@@ -47,6 +47,18 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $this->assertSame($columns, $product->getColumns());
     }
 
+    public function testSelect()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setColumns(['name', 'rrp']);
+
+        $this->assertSql(
+            $product->getSelect(),
+            'SELECT name, rrp FROM product'
+        );
+    }
+
     public function assertSql($query, $sql, $values = null)
     {
         list($stmt, $bind) = $this->queryBuilder->assemble($query);

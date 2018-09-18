@@ -2,6 +2,8 @@
 
 namespace ipl\Orm;
 
+use ipl\Sql;
+
 class Model
 {
     /** @var string */
@@ -9,6 +11,9 @@ class Model
 
     /** @var string[] */
     protected $columns;
+
+    /** @var Sql\Select */
+    protected $select;
 
     /**
      * @return  string|null
@@ -50,5 +55,29 @@ class Model
         return $this;
     }
 
+    /**
+     * @return  Sql\Select
+     */
+    public function getSelect()
+    {
+        if ($this->select === null) {
+            $this->select = (new Sql\Select())
+                ->from($this->getTableName())
+                ->columns($this->getColumns());
+        }
 
+        return $this->select;
+    }
+
+    /**
+     * @param   Sql\Select  $select
+     *
+     * @return  $this
+     */
+    public function setSelect(Sql\Select $select)
+    {
+        $this->select = $select;
+
+        return $this;
+    }
 }
