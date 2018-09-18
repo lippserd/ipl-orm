@@ -9,6 +9,9 @@ class Model
     /** @var string */
     protected $tableName;
 
+    /** @var string */
+    protected $tableAlias;
+
     /** @var string[] */
     protected $columns;
 
@@ -31,6 +34,26 @@ class Model
     public function setTableName($tableName)
     {
         $this->tableName = $tableName;
+
+        return $this;
+    }
+
+    /**
+     * @return  string|null
+     */
+    public function getTableAlias()
+    {
+        return $this->tableAlias ?: $this->getTableName();
+    }
+
+    /**
+     * @param   string  $tableAlias
+     *
+     * @return  $this
+     */
+    public function setTableAlias($tableAlias)
+    {
+        $this->tableAlias = $tableAlias;
 
         return $this;
     }
@@ -61,9 +84,20 @@ class Model
     public function getSelect()
     {
         if ($this->select === null) {
+            $tableAlias = $this->getTableAlias();
+
+            $from = [$tableAlias => $this->getTableName()];
+
+            $columns = array_map(
+                function ($column) use ($tableAlias) {
+                    return $tableAlias . '.' . $column;
+                },
+                $this->getColumns()
+            );
+
             $this->select = (new Sql\Select())
-                ->from($this->getTableName())
-                ->columns($this->getColumns());
+                ->from($from)
+                ->columns($columns);
         }
 
         return $this->select;
