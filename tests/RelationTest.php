@@ -21,4 +21,19 @@ class RelationTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSame($shop, $relation->getTarget());
     }
+
+    public function testNoName()
+    {
+        $relation = new Orm\Relation();
+
+        $this->assertNull($relation->getName());
+    }
+
+    public function testName()
+    {
+        $relation = (new Orm\Relation())
+            ->setName('shop');
+
+        $this->assertSame('shop', $relation->getName());
+    }
 }
