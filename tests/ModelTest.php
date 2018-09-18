@@ -30,6 +30,23 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $this->assertSame('product', $product->getTableName());
     }
 
+    public function testNoColumns()
+    {
+        $product = new Orm\Model();
+
+        $this->assertNull($product->getColumns());
+    }
+
+    public function testColumns()
+    {
+        $columns = ['name', 'rrp'];
+
+        $product = (new Orm\Model())
+            ->setColumns($columns);
+
+        $this->assertSame($columns, $product->getColumns());
+    }
+
     public function assertSql($query, $sql, $values = null)
     {
         list($stmt, $bind) = $this->queryBuilder->assemble($query);
