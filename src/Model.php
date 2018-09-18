@@ -18,6 +18,9 @@ class Model
     /** @var string */
     protected $keyName;
 
+    /** @var Relation[] */
+    protected $relations;
+
     /** @var Sql\Select */
     protected $select;
 
@@ -99,6 +102,14 @@ class Model
         $this->keyName = $keyName;
 
         return $this;
+    }
+
+    /**
+     * @return  Relation[]
+     */
+    public function getRelations()
+    {
+        return $this->relations;
     }
 
     /**
