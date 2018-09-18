@@ -156,6 +156,13 @@ class Model
         return $this->select;
     }
 
+    public function with($relation)
+    {
+        if (! isset($this->relations[$relation])) {
+            throw new \InvalidArgumentException("Relation '$relation' does not exist.");
+        }
+    }
+
     /**
      * @param   Sql\Select  $select
      *

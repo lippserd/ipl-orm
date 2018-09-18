@@ -135,6 +135,16 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         );
     }
 
+    /**
+     * @expectedException \InvalidArgumentException
+     */
+    public function testUnknownWithThrowsException()
+    {
+        $product = new Orm\Model();
+
+        $product->with('shop');
+    }
+
     public function assertSql($query, $sql, $values = null)
     {
         list($stmt, $bind) = $this->queryBuilder->assemble($query);
