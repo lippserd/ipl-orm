@@ -15,6 +15,21 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $this->queryBuilder = new Sql\QueryBuilder(new TestAdapter());
     }
 
+    public function testNoTableName()
+    {
+        $product = new Orm\Model();
+
+        $this->assertNull($product->getTableName());
+    }
+
+    public function testTableName()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product');
+
+        $this->assertSame('product', $product->getTableName());
+    }
+
     public function assertSql($query, $sql, $values = null)
     {
         list($stmt, $bind) = $this->queryBuilder->assemble($query);
