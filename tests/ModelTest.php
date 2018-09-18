@@ -77,6 +77,39 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $this->assertSame('id', $product->getKeyName());
     }
 
+    public function testNoRelations()
+    {
+        $product = new Orm\Model();
+
+        $this->assertNull($product->getRelations());
+    }
+
+    public function testManyRelation()
+    {
+        $product = new Orm\Model();
+        $shop = new Orm\Model();
+
+        $product->hasMany('shop', $shop);
+
+        $relation = $product->getRelations()['shop'];
+
+        $this->assertSame('shop', $relation->getName());
+        $this->assertSame($shop, $relation->getTarget());
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     */
+    public function testDuplicateRelationThrowsException()
+    {
+        $product = new Orm\Model();
+        $shop = new Orm\Model();
+
+        $product
+            ->hasMany('shop', $shop)
+            ->hasMany('shop', $shop);
+    }
+
     public function testSelect()
     {
         $product = (new Orm\Model())

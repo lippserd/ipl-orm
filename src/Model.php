@@ -105,6 +105,25 @@ class Model
     }
 
     /**
+     * @param   string  $name
+     * @param   Model   $target
+     *
+     * @return  $this
+     *
+     * @throws  \InvalidArgumentException
+     */
+    public function hasMany($name, Model $target)
+    {
+        $this->assertRelationDoesNotYetExist($name);
+
+        $this->relations[$name] = (new Many())
+            ->setName($name)
+            ->setTarget($target);
+
+        return $this;
+    }
+
+    /**
      * @return  Relation[]
      */
     public function getRelations()
@@ -147,5 +166,12 @@ class Model
         $this->select = $select;
 
         return $this;
+    }
+
+    private function assertRelationDoesNotYetExist($name)
+    {
+        if (isset($this->relations[$name])) {
+            throw new \InvalidArgumentException("Relation '$name' already exists");
+        }
     }
 }
