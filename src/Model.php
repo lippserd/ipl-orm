@@ -15,6 +15,9 @@ class Model
     /** @var string[] */
     protected $columns;
 
+    /** @var string */
+    protected $keyName;
+
     /** @var Sql\Select */
     protected $select;
 
@@ -74,6 +77,26 @@ class Model
     public function setColumns(array $columns)
     {
         $this->columns = $columns;
+
+        return $this;
+    }
+
+    /**
+     * @return  string
+     */
+    public function getKeyName()
+    {
+        return $this->keyName;
+    }
+
+    /**
+     * @param   string  $keyName
+     *
+     * @return  $this
+     */
+    public function setKeyName($keyName)
+    {
+        $this->keyName = $keyName;
 
         return $this;
     }

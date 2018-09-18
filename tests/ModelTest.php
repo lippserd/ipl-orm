@@ -62,6 +62,21 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $this->assertSame($columns, $product->getColumns());
     }
 
+    public function testNoKeyName()
+    {
+        $product = new Orm\Model();
+
+        $this->assertNull($product->getKeyName());
+    }
+
+    public function testKeyName()
+    {
+        $product = (new Orm\Model())
+            ->setKeyName('id');
+
+        $this->assertSame('id', $product->getKeyName());
+    }
+
     public function testSelect()
     {
         $product = (new Orm\Model())
