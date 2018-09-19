@@ -123,7 +123,7 @@ class Model
      * @param   string  $name
      * @param   Model   $target
      *
-     * @return  $this
+     * @return  Many
      *
      * @throws  \InvalidArgumentException
      */
@@ -131,11 +131,13 @@ class Model
     {
         $this->assertRelationDoesNotYetExist($name);
 
-        $this->relations[$name] = (new Many())
+        $relation = (new Many())
             ->setName($name)
             ->setTarget($target);
 
-        return $this;
+        $this->relations[$name] = $relation;
+
+        return $relation;
     }
 
     /**
@@ -177,12 +179,17 @@ class Model
 
         $keyName = $this->getKeyName();
 
-        $foreignKey = $targetTableAlias . '.' . $this->getTableName() . '_' . $keyName;
-        $localKey = $this->getTableAlias() . '.' . $keyName;
+        $foreignKey = $targetTableAlias
+            . '.'
+            . ($relation->getForeignKey() ?: $this->getTableName() . '_' . $keyName);
+
+        $candidateKey = $this->getTableAlias()
+            . '.'
+            . ($relation->getCandidateKey() ?: $keyName);
 
         $this
             ->getSelect()
-            ->join([$targetTableAlias => $target->getTableName()], ["$foreignKey = $localKey"])
+            ->join([$targetTableAlias => $target->getTableName()], ["$foreignKey = $candidateKey"])
             ->columns($target->getColumnsQualified());
 
         return $this;

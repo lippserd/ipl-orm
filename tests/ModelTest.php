@@ -164,6 +164,30 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         );
     }
 
+    public function testSelectManyRelationWithExplicitForeignAndCandidateKey()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKeyName('id')
+            ->setColumns(['name', 'rrp']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setColumns(['name', 'city']);
+
+        $product
+            ->hasMany('shop', $shop)
+            ->setForeignKey('product_hash')
+            ->setCandidateKey('hash');
+
+        $this->assertSql(
+            $product->with('shop')->getSelect(),
+            'SELECT product.name, product.rrp, shop.name, shop.city'
+            . ' FROM product product'
+            . ' INNER JOIN shop shop ON shop.product_hash = product.hash'
+        );
+    }
+
     /**
      * @expectedException \InvalidArgumentException
      */
@@ -172,9 +196,8 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $product = new Orm\Model();
         $shop = new Orm\Model();
 
-        $product
-            ->hasMany('shop', $shop)
-            ->hasMany('shop', $shop);
+        $product->hasMany('shop', $shop);
+        $product->hasMany('shop', $shop);
     }
 
     public function testSelect()

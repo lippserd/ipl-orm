@@ -36,4 +36,34 @@ class RelationTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSame('shop', $relation->getName());
     }
+
+    public function testNoForeignKey()
+    {
+        $relation = new Orm\Relation();
+
+        $this->assertNull($relation->getForeignKey());
+    }
+
+    public function testForeignKey()
+    {
+        $relation = (new Orm\Relation())
+            ->setForeignKey('shop_id');
+
+        $this->assertSame('shop_id', $relation->getForeignKey());
+    }
+
+    public function testNoCandidateKey()
+    {
+        $relation = new Orm\Relation();
+
+        $this->assertNull($relation->getCandidateKey());
+    }
+
+    public function testCandidateKey()
+    {
+        $relation = (new Orm\Relation())
+            ->setCandidateKey('product_id');
+
+        $this->assertSame('product_id', $relation->getCandidateKey());
+    }
 }

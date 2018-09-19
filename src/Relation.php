@@ -10,6 +10,12 @@ class Relation
     /** @var Model */
     protected $target;
 
+    /** @var string */
+    protected $foreignKey;
+
+    /** @var string */
+    protected $candidateKey;
+
     /**
      * @return  string|null
      */
@@ -46,6 +52,46 @@ class Relation
     public function setTarget($target)
     {
         $this->target = $target;
+
+        return $this;
+    }
+
+    /**
+     * @return  string
+     */
+    public function getForeignKey()
+    {
+        return $this->foreignKey;
+    }
+
+    /**
+     * @param   string  $foreignKey
+     *
+     * @return  $this
+     */
+    public function setForeignKey($foreignKey)
+    {
+        $this->foreignKey = $foreignKey;
+
+        return $this;
+    }
+
+    /**
+     * @return  string
+     */
+    public function getCandidateKey()
+    {
+        return $this->candidateKey;
+    }
+
+    /**
+     * @param   string  $candidateKey
+     *
+     * @return  $this
+     */
+    public function setCandidateKey($candidateKey)
+    {
+        $this->candidateKey = $candidateKey;
 
         return $this;
     }
