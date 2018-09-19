@@ -154,9 +154,7 @@ class Model
     public function getSelect()
     {
         if ($this->select === null) {
-            $tableAlias = $this->getTableAlias();
-
-            $from = [$tableAlias => $this->getTableName()];
+            $from = [$this->getTableAlias() => $this->getTableName()];
 
             $this->select = (new Sql\Select())
                 ->from($from)
