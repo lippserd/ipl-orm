@@ -85,19 +85,19 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $this->assertSame(['p.name', 'p.rrp'], $product->getColumnsQualified());
     }
 
-    public function testNoKeyName()
+    public function testNoKey()
     {
         $product = new Orm\Model();
 
-        $this->assertNull($product->getKeyName());
+        $this->assertNull($product->getKey());
     }
 
-    public function testKeyName()
+    public function testKey()
     {
         $product = (new Orm\Model())
-            ->setKeyName('id');
+            ->setKey('id');
 
-        $this->assertSame('id', $product->getKeyName());
+        $this->assertSame('id', $product->getKey());
     }
 
     public function testNoRelations()
@@ -124,7 +124,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
     {
         $product = (new Orm\Model())
             ->setTableName('product')
-            ->setKeyName('id')
+            ->setKey('id')
             ->setColumns(['name', 'rrp']);
 
         $shop = (new Orm\Model())
@@ -146,7 +146,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $product = (new Orm\Model())
             ->setTableName('product')
             ->setTableAlias('p')
-            ->setKeyName('id')
+            ->setKey('id')
             ->setColumns(['name', 'rrp']);
 
         $shop = (new Orm\Model())
@@ -168,7 +168,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
     {
         $product = (new Orm\Model())
             ->setTableName('product')
-            ->setKeyName('id')
+            ->setKey('id')
             ->setColumns(['name', 'rrp']);
 
         $shop = (new Orm\Model())

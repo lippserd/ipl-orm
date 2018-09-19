@@ -16,7 +16,7 @@ class Model
     protected $columns;
 
     /** @var string */
-    protected $keyName;
+    protected $key;
 
     /** @var Relation[] */
     protected $relations;
@@ -102,19 +102,19 @@ class Model
     /**
      * @return  string
      */
-    public function getKeyName()
+    public function getKey()
     {
-        return $this->keyName;
+        return $this->key;
     }
 
     /**
-     * @param   string  $keyName
+     * @param   string  $key
      *
      * @return  $this
      */
-    public function setKeyName($keyName)
+    public function setKey($key)
     {
-        $this->keyName = $keyName;
+        $this->key = $key;
 
         return $this;
     }
@@ -175,15 +175,15 @@ class Model
         $target = $relation->getTarget();
         $targetTableAlias = $target->getTableAlias();
 
-        $keyName = $this->getKeyName();
+        $key = $this->getKey();
 
         $foreignKey = $targetTableAlias
             . '.'
-            . ($relation->getForeignKey() ?: $this->getTableName() . '_' . $keyName);
+            . ($relation->getForeignKey() ?: $this->getTableName() . '_' . $key);
 
         $candidateKey = $this->getTableAlias()
             . '.'
-            . ($relation->getCandidateKey() ?: $keyName);
+            . ($relation->getCandidateKey() ?: $key);
 
         $this
             ->getSelect()
