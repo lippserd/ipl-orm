@@ -62,6 +62,29 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $this->assertSame($columns, $product->getColumns());
     }
 
+    public function testColumnsQualified()
+    {
+        $columns = ['name', 'rrp'];
+
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setColumns($columns);
+
+        $this->assertSame(['product.name', 'product.rrp'], $product->getColumnsQualified());
+    }
+
+    public function testColumnsQualifiedWithAlias()
+    {
+        $columns = ['name', 'rrp'];
+
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setTableAlias('p')
+            ->setColumns($columns);
+
+        $this->assertSame(['p.name', 'p.rrp'], $product->getColumnsQualified());
+    }
+
     public function testNoKeyName()
     {
         $product = new Orm\Model();
@@ -95,6 +118,50 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSame('shop', $relation->getName());
         $this->assertSame($shop, $relation->getTarget());
+    }
+
+    public function testSelectManyRelation()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKeyName('id')
+            ->setColumns(['name', 'rrp']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setColumns(['name', 'city']);
+
+        $product->hasMany('shop', $shop);
+
+        $this->assertSql(
+            $product->with('shop')->getSelect(),
+            'SELECT product.name, product.rrp, shop.name, shop.city'
+            . ' FROM product product'
+            . ' INNER JOIN shop shop ON shop.product_id = product.id'
+        );
+    }
+
+    public function testSelectManyRelationWithAlias()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setTableAlias('p')
+            ->setKeyName('id')
+            ->setColumns(['name', 'rrp']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setTableAlias('s')
+            ->setColumns(['name', 'city']);
+
+        $product->hasMany('shop', $shop);
+
+        $this->assertSql(
+            $product->with('shop')->getSelect(),
+            'SELECT p.name, p.rrp, s.name, s.city'
+            . ' FROM product p'
+            . ' INNER JOIN shop s ON s.product_id = p.id'
+        );
     }
 
     /**

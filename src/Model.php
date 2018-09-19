@@ -65,6 +65,21 @@ class Model
     }
 
     /**
+     * @return  string[]
+     */
+    public function getColumnsQualified()
+    {
+        $tableAlias = $this->getTableAlias();
+
+        return array_map(
+            function ($column) use ($tableAlias) {
+                return $tableAlias . '.' . $column;
+            },
+            $this->getColumns()
+        );
+    }
+
+    /**
      * @return  string[]|null
      */
     public function getColumns()
@@ -141,26 +156,36 @@ class Model
 
             $from = [$tableAlias => $this->getTableName()];
 
-            $columns = array_map(
-                function ($column) use ($tableAlias) {
-                    return $tableAlias . '.' . $column;
-                },
-                $this->getColumns()
-            );
-
             $this->select = (new Sql\Select())
                 ->from($from)
-                ->columns($columns);
+                ->columns($this->getColumnsQualified());
         }
 
         return $this->select;
     }
 
-    public function with($relation)
+    public function with($name)
     {
-        if (! isset($this->relations[$relation])) {
-            throw new \InvalidArgumentException("Relation '$relation' does not exist.");
+        if (! isset($this->relations[$name])) {
+            throw new \InvalidArgumentException("Relation '$name' does not exist.");
         }
+
+        $relation = $this->relations[$name];
+
+        $target = $relation->getTarget();
+        $targetTableAlias = $target->getTableAlias();
+
+        $keyName = $this->getKeyName();
+
+        $foreignKey = $targetTableAlias . '.' . $this->getTableName() . '_' . $keyName;
+        $localKey = $this->getTableAlias() . '.' . $keyName;
+
+        $this
+            ->getSelect()
+            ->join([$targetTableAlias => $target->getTableName()], ["$foreignKey = $localKey"])
+            ->columns($target->getColumnsQualified());
+
+        return $this;
     }
 
     /**
