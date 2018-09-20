@@ -52,6 +52,16 @@ class RelationTest extends \PHPUnit_Framework_TestCase
         $this->assertSame('shop_id', $relation->getForeignKey());
     }
 
+    public function testForeignKeyCompound()
+    {
+        $foreignKey = ['shop_name', 'shop_city'];
+
+        $relation = (new Orm\Relation())
+            ->setForeignKey($foreignKey);
+
+        $this->assertSame($foreignKey, $relation->getForeignKey());
+    }
+
     public function testNoCandidateKey()
     {
         $relation = new Orm\Relation();
@@ -65,5 +75,15 @@ class RelationTest extends \PHPUnit_Framework_TestCase
             ->setCandidateKey('product_id');
 
         $this->assertSame('product_id', $relation->getCandidateKey());
+    }
+
+    public function testCandidateKeyCompound()
+    {
+        $candidateKey = ['product_name', 'product_vendor'];
+
+        $relation = (new Orm\Relation())
+            ->setCandidateKey($candidateKey);
+
+        $this->assertSame($candidateKey, $relation->getCandidateKey());
     }
 }

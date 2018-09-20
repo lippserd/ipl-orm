@@ -10,10 +10,10 @@ class Relation
     /** @var Model */
     protected $target;
 
-    /** @var string */
+    /** @var string|array */
     protected $foreignKey;
 
-    /** @var string */
+    /** @var string|array */
     protected $candidateKey;
 
     /**
@@ -57,7 +57,7 @@ class Relation
     }
 
     /**
-     * @return  string
+     * @return  string|array
      */
     public function getForeignKey()
     {
@@ -65,7 +65,7 @@ class Relation
     }
 
     /**
-     * @param   string  $foreignKey
+     * @param   string|array    $foreignKey
      *
      * @return  $this
      */
@@ -77,7 +77,7 @@ class Relation
     }
 
     /**
-     * @return  string
+     * @return  string|array
      */
     public function getCandidateKey()
     {
@@ -85,7 +85,7 @@ class Relation
     }
 
     /**
-     * @param   string  $candidateKey
+     * @param   string|array    $candidateKey
      *
      * @return  $this
      */

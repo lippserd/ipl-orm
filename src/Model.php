@@ -12,10 +12,10 @@ class Model
     /** @var string */
     protected $tableAlias;
 
-    /** @var string[] */
+    /** @var array */
     protected $columns;
 
-    /** @var string */
+    /** @var string|array */
     protected $key;
 
     /** @var Relation[] */
@@ -65,7 +65,7 @@ class Model
     }
 
     /**
-     * @return  string[]
+     * @return  array
      */
     public function getColumnsQualified()
     {
@@ -80,7 +80,7 @@ class Model
     }
 
     /**
-     * @return  string[]|null
+     * @return  array|null
      */
     public function getColumns()
     {
@@ -88,7 +88,7 @@ class Model
     }
 
     /**
-     * @param   string[]    $columns
+     * @param   array   $columns
      *
      * @return  $this
      */
@@ -100,7 +100,7 @@ class Model
     }
 
     /**
-     * @return  string
+     * @return  string|array|null
      */
     public function getKey()
     {
@@ -108,7 +108,7 @@ class Model
     }
 
     /**
-     * @param   string  $key
+     * @param   string|array    $key
      *
      * @return  $this
      */
@@ -170,24 +170,61 @@ class Model
             throw new \InvalidArgumentException("Relation '$name' does not exist.");
         }
 
+        $tableName = $this->getTableName();
+        $key = (array) $this->getKey();
+
         $relation = $this->relations[$name];
+
+        $candidateKey = (array) $relation->getCandidateKey();
+
+        if (empty($candidateKey)) {
+            $candidateKey = $key;
+        }
+
+        if (empty($candidateKey)) {
+            throw new \RuntimeException(sprintf(
+                "Can't join relation '%s' in model '%s'. No candidate key found.",
+                $name,
+                static::class
+            ));
+        }
+
+        $foreignKey = (array) $relation->getForeignKey();
+
+        if (empty($foreignKey)) {
+            $foreignKey = array_map(
+                function ($key) use ($tableName) {
+                    return "{$tableName}_{$key}";
+                },
+                $key
+            );
+        }
+
+        if (count($foreignKey) !== count($candidateKey)) {
+            throw new \RuntimeException(sprintf(
+                "Can't join relation '%s' in model '%s'."
+                . " Foreign key count (%s) does not match candidate key count (%s).",
+                $name,
+                static::class,
+                implode(', ', $foreignKey),
+                implode(', ', $candidateKey)
+            ));
+        }
+
+        $tableAlias = $this->getTableAlias();
 
         $target = $relation->getTarget();
         $targetTableAlias = $target->getTableAlias();
 
-        $key = $this->getKey();
+        $condition = [];
 
-        $foreignKey = $targetTableAlias
-            . '.'
-            . ($relation->getForeignKey() ?: $this->getTableName() . '_' . $key);
-
-        $candidateKey = $this->getTableAlias()
-            . '.'
-            . ($relation->getCandidateKey() ?: $key);
+        foreach ($foreignKey as $i => $name) {
+            $condition[] = sprintf('%s.%s = %s.%s', $targetTableAlias, $name, $tableAlias, $candidateKey[$i]);
+        }
 
         $this
             ->getSelect()
-            ->join([$targetTableAlias => $target->getTableName()], ["$foreignKey = $candidateKey"])
+            ->join([$targetTableAlias => $target->getTableName()], $condition)
             ->columns($target->getColumnsQualified());
 
         return $this;

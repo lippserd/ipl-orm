@@ -100,6 +100,17 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $this->assertSame('id', $product->getKey());
     }
 
+
+    public function testKeyCompound()
+    {
+        $key = ['name', 'vendor'];
+
+        $product = (new Orm\Model())
+            ->setKey($key);
+
+        $this->assertSame($key, $product->getKey());
+    }
+
     public function testNoRelations()
     {
         $product = new Orm\Model();
@@ -186,6 +197,91 @@ class ModelTest extends \PHPUnit_Framework_TestCase
             . ' FROM product product'
             . ' INNER JOIN shop shop ON shop.product_hash = product.hash'
         );
+    }
+
+    public function testSelectManyRelationWithCompoundKey()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKey(['name', 'vendor'])
+            ->setColumns(['name', 'rrp']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setColumns(['name', 'city']);
+
+        $product
+            ->hasMany('shop', $shop);
+
+        $this->assertSql(
+            $product->with('shop')->getSelect(),
+            'SELECT product.name, product.rrp, shop.name, shop.city'
+            . ' FROM product product'
+            . ' INNER JOIN shop shop ON (shop.product_name = product.name) AND (shop.product_vendor = product.vendor)'
+        );
+    }
+
+    public function testSelectManyRelationWithCompoundForeignAndCandidateKey()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKey('id')
+            ->setColumns(['name', 'rrp']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setColumns(['name', 'city']);
+
+        $product
+            ->hasMany('shop', $shop)
+            ->setForeignKey(['product_name', 'product_vendor'])
+            ->setCandidateKey(['name', 'vendor']);
+
+        $this->assertSql(
+            $product->with('shop')->getSelect(),
+            'SELECT product.name, product.rrp, shop.name, shop.city'
+            . ' FROM product product'
+            . ' INNER JOIN shop shop ON (shop.product_name = product.name) AND (shop.product_vendor = product.vendor)'
+        );
+    }
+
+    /**
+     * @expectedException \RuntimeException
+     */
+    public function testSelectManyRelationWithoutKeyThrowsException()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setColumns(['name', 'rrp']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setColumns(['name', 'city']);
+
+        $product->hasMany('shop', $shop);
+
+        $product->with('shop');
+    }
+
+    /**
+     * @expectedException \RuntimeException
+     */
+    public function testSelectManyRelationWithMismatchingKeyCountsThrowsException()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setColumns(['name', 'rrp']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setColumns(['name', 'city']);
+
+        $product
+            ->hasMany('shop', $shop)
+            ->setForeignKey('id')
+            ->setCandidateKey(['name', 'vendor']);
+
+        $product->with('shop');
     }
 
     /**
