@@ -118,6 +118,39 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $this->assertNull($product->getRelations());
     }
 
+    public function testHasRelation()
+    {
+        $product = new Orm\Model();
+
+        $shop = new Orm\Model();
+
+        $product->hasMany('shop', $shop);
+
+        $this->assertTrue($product->hasRelation('shop'));
+        $this->assertFalse($shop->hasRelation('product'));
+    }
+
+    public function testGetRelation()
+    {
+        $product = new Orm\Model();
+
+        $shop = new Orm\Model();
+
+        $product->hasMany('shop', $shop);
+
+        $this->assertInstanceOf(Orm\Many::class, $product->getRelation('shop'));
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     */
+    public function testGetRelationThrowsExceptionIfRelationDoesNotExist()
+    {
+        $product = new Orm\Model();
+
+        $product->getRelation('shop');
+    }
+
     public function testManyRelation()
     {
         $product = new Orm\Model();
@@ -284,6 +317,71 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $product->with('shop');
     }
 
+    public function testSelectNestedRelation()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKey('id')
+            ->setColumns(['name', 'rrp']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setKey('id')
+            ->setColumns(['name', 'city']);
+
+        $country = (new Orm\Model())
+            ->setTableName('country')
+            ->setColumns(['name']);
+
+        $product->hasMany('shop', $shop);
+
+        $shop->hasMany('country', $country);
+
+        $product->with('shop.country');
+
+        $this->assertSql(
+            $product->getSelect(),
+            'SELECT product.name, product.rrp, shop.name, shop.city, country.name'
+            . ' FROM product product'
+            . ' INNER JOIN shop shop ON shop.product_id = product.id'
+            . ' INNER JOIN country country ON country.shop_id = shop.id'
+        );
+    }
+
+    public function testDuplicateWithIsNoop()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKey('id')
+            ->setColumns(['name', 'rrp']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setKey('id')
+            ->setColumns(['name', 'city']);
+
+        $country = (new Orm\Model())
+            ->setTableName('country')
+            ->setColumns(['name']);
+
+        $product->hasMany('shop', $shop);
+
+        $shop->hasMany('country', $country);
+
+        $product
+            ->with('shop.country')
+            ->with('shop.country')
+            ->with('shop');
+
+        $this->assertSql(
+            $product->getSelect(),
+            'SELECT product.name, product.rrp, shop.name, shop.city, country.name'
+            . ' FROM product product'
+            . ' INNER JOIN shop shop ON shop.product_id = product.id'
+            . ' INNER JOIN country country ON country.shop_id = shop.id'
+        );
+    }
+
     /**
      * @expectedException \InvalidArgumentException
      */
@@ -322,7 +420,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @expectedException \InvalidArgumentException
+     * @expectedException \RuntimeException
      */
     public function testUnknownWithThrowsException()
     {
