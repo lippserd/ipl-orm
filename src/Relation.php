@@ -97,47 +97,6 @@ class Relation
     }
 
     /**
-     * @param   Model           $subject
-     * @param   string|array    $foreignKey
-     *
-     * @return  array
-     */
-    protected function resolveForeignKey(Model $subject, $foreignKey)
-    {
-        $foreignKey = (array) $foreignKey;
-
-        if (empty($foreignKey)) {
-            $tableName = $subject->getTableName();
-
-            $foreignKey = array_map(
-                function ($key) use ($tableName) {
-                    return "{$tableName}_{$key}";
-                },
-                (array) $subject->getKey()
-            );
-        }
-
-        return $foreignKey;
-    }
-
-    /**
-     * @param   Model           $subject
-     * @param   string|array    $candidateKey
-     *
-     * @return  array
-     */
-    protected function resolveCandidateKey(Model $subject, $candidateKey)
-    {
-        $candidateKey = (array) $candidateKey;
-
-        if (empty($candidateKey)) {
-            $candidateKey = (array) $subject->getKey();
-        }
-
-        return $candidateKey;
-    }
-
-    /**
      * @param   Model   $source
      *
      * @return  array
@@ -185,5 +144,46 @@ class Relation
         return [
             [$targetTableAlias, $target->getTableName(), $condition]
         ];
+    }
+
+    /**
+     * @param   Model           $subject
+     * @param   string|array    $foreignKey
+     *
+     * @return  array
+     */
+    protected function resolveForeignKey(Model $subject, $foreignKey)
+    {
+        $foreignKey = (array) $foreignKey;
+
+        if (empty($foreignKey)) {
+            $tableName = $subject->getTableName();
+
+            $foreignKey = array_map(
+                function ($key) use ($tableName) {
+                    return "{$tableName}_{$key}";
+                },
+                (array) $subject->getKey()
+            );
+        }
+
+        return $foreignKey;
+    }
+
+    /**
+     * @param   Model           $subject
+     * @param   string|array    $candidateKey
+     *
+     * @return  array
+     */
+    protected function resolveCandidateKey(Model $subject, $candidateKey)
+    {
+        $candidateKey = (array) $candidateKey;
+
+        if (empty($candidateKey)) {
+            $candidateKey = (array) $subject->getKey();
+        }
+
+        return $candidateKey;
     }
 }
