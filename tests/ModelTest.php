@@ -454,6 +454,64 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         );
     }
 
+    public function testSelectManyViaRelationWithExplicitForeignAndCandidateKey()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKey('id')
+            ->setColumns(['name', 'rrp']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setKey('id')
+            ->setColumns(['name', 'city']);
+
+        $product
+            ->hasMany('shop', $shop)
+            ->setForeignKey('product_hash')
+            ->setCandidateKey('hash')
+            ->setVia('shop_product')
+            ->setTargetForeignKey('shop_hash')
+            ->setTargetCandidateKey('hash');
+
+
+        $this->assertSql(
+            $product->with('shop')->getSelect(),
+            'SELECT product.name, product.rrp, shop.name, shop.city'
+            . ' FROM product product'
+            . ' INNER JOIN shop_product shop_product ON shop_product.product_hash = product.hash'
+            . ' INNER JOIN shop shop ON shop.hash = shop_product.shop_hash'
+        );
+    }
+
+    public function testSelectManyViaRelationWithPartlyExplicitForeignAndCandidateKey()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKey('id')
+            ->setColumns(['name', 'rrp']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setKey('id')
+            ->setColumns(['name', 'city']);
+
+        $product
+            ->hasMany('shop', $shop)
+            ->setForeignKey('product_hash')
+            ->setVia('shop_product')
+            ->setTargetCandidateKey('hash');
+
+
+        $this->assertSql(
+            $product->with('shop')->getSelect(),
+            'SELECT product.name, product.rrp, shop.name, shop.city'
+            . ' FROM product product'
+            . ' INNER JOIN shop_product shop_product ON shop_product.product_hash = product.id'
+            . ' INNER JOIN shop shop ON shop.hash = shop_product.shop_id'
+        );
+    }
+
     public function assertSql($query, $sql, $values = null)
     {
         list($stmt, $bind) = $this->queryBuilder->assemble($query);

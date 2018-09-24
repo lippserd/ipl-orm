@@ -96,9 +96,15 @@ class Relation
         return $this;
     }
 
-    protected function resolveForeignKey(Model $subject)
+    /**
+     * @param   Model           $subject
+     * @param   string|array    $foreignKey
+     *
+     * @return  array
+     */
+    protected function resolveForeignKey(Model $subject, $foreignKey)
     {
-        $foreignKey = (array) $this->getForeignKey();
+        $foreignKey = (array) $foreignKey;
 
         if (empty($foreignKey)) {
             $tableName = $subject->getTableName();
@@ -114,9 +120,15 @@ class Relation
         return $foreignKey;
     }
 
-    protected function resolveCandidateKey(Model $subject)
+    /**
+     * @param   Model           $subject
+     * @param   string|array    $candidateKey
+     *
+     * @return  array
+     */
+    protected function resolveCandidateKey(Model $subject, $candidateKey)
     {
-        $candidateKey = (array) $this->getCandidateKey();
+        $candidateKey = (array) $candidateKey;
 
         if (empty($candidateKey)) {
             $candidateKey = (array) $subject->getKey();
@@ -134,7 +146,7 @@ class Relation
     {
         $name = $this->getName();
 
-        $candidateKey = $this->resolveCandidateKey($source);
+        $candidateKey = $this->resolveCandidateKey($source, $this->getCandidateKey());
 
         if (empty($candidateKey)) {
             throw new \RuntimeException(sprintf(
@@ -145,7 +157,7 @@ class Relation
             ));
         }
 
-        $foreignKey = $this->resolveForeignKey($source);
+        $foreignKey = $this->resolveForeignKey($source, $this->getForeignKey());
 
         if (count($foreignKey) !== count($candidateKey)) {
             throw new \RuntimeException(sprintf(
