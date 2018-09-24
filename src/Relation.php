@@ -130,10 +130,10 @@ class Relation
             ));
         }
 
-        $tableAlias = $source->getTableAlias();
+        $tableAlias = $source->getTableName();
 
         $target = $this->getTarget();
-        $targetTableAlias = $target->getTableAlias();
+        $targetTableAlias = $target->getTableName();
 
         $condition = [];
 

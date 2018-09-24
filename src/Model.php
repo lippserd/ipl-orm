@@ -9,9 +9,6 @@ class Model
     /** @var string */
     protected $tableName;
 
-    /** @var string */
-    protected $tableAlias;
-
     /** @var array */
     protected $columns;
 
@@ -48,31 +45,11 @@ class Model
     }
 
     /**
-     * @return  string|null
-     */
-    public function getTableAlias()
-    {
-        return $this->tableAlias ?: $this->getTableName();
-    }
-
-    /**
-     * @param   string  $tableAlias
-     *
-     * @return  $this
-     */
-    public function setTableAlias($tableAlias)
-    {
-        $this->tableAlias = $tableAlias;
-
-        return $this;
-    }
-
-    /**
      * @return  array
      */
     public function getColumnsQualified()
     {
-        $tableAlias = $this->getTableAlias();
+        $tableAlias = $this->getTableName();
 
         return array_map(
             function ($column) use ($tableAlias) {
@@ -188,7 +165,7 @@ class Model
     public function getSelect()
     {
         if ($this->select === null) {
-            $from = [$this->getTableAlias() => $this->getTableName()];
+            $from = [$this->getTableName() => $this->getTableName()];
 
             $this->select = (new Sql\Select())
                 ->from($from)
