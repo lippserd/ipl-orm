@@ -133,7 +133,7 @@ class Relation
         $tableAlias = $source->getTableName();
 
         $target = $this->getTarget();
-        $targetTableAlias = $target->getTableName();
+        $targetTableAlias = $this->getName();
 
         $condition = [];
 

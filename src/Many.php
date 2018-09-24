@@ -87,6 +87,7 @@ class Many extends Relation
             $relation = clone $this;
             $relation
                 ->setVia(null)
+                ->setName($this->via)
                 ->setTarget($intermediate);
 
             $resolved = $relation->resolve($source);

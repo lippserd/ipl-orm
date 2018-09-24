@@ -45,15 +45,15 @@ class Model
     }
 
     /**
+     * @param   string  $prefix
+     *
      * @return  array
      */
-    public function getColumnsQualified()
+    public function getColumnsQualified($prefix)
     {
-        $tableAlias = $this->getTableName();
-
         return array_map(
-            function ($column) use ($tableAlias) {
-                return $tableAlias . '.' . $column;
+            function ($column) use ($prefix) {
+                return $prefix . '.' . $column;
             },
             $this->getColumns()
         );
@@ -165,11 +165,13 @@ class Model
     public function getSelect()
     {
         if ($this->select === null) {
-            $from = [$this->getTableName() => $this->getTableName()];
+            $tableName = $this->getTableName();
+
+            $from = [$tableName => $tableName];
 
             $this->select = (new Sql\Select())
                 ->from($from)
-                ->columns($this->getColumnsQualified());
+                ->columns($this->getColumnsQualified($tableName));
         }
 
         return $this->select;
@@ -209,7 +211,7 @@ class Model
 
             $target = $relation->getTarget();
 
-            $select->columns($target->getColumnsQualified());
+            $select->columns($target->getColumnsQualified($name));
 
             $this->with[$path] = $relation;
 
