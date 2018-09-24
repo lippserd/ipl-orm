@@ -95,4 +95,83 @@ class Relation
 
         return $this;
     }
+
+    protected function resolveForeignKey(Model $subject)
+    {
+        $foreignKey = (array) $this->getForeignKey();
+
+        if (empty($foreignKey)) {
+            $tableName = $subject->getTableName();
+
+            $foreignKey = array_map(
+                function ($key) use ($tableName) {
+                    return "{$tableName}_{$key}";
+                },
+                (array) $subject->getKey()
+            );
+        }
+
+        return $foreignKey;
+    }
+
+    protected function resolveCandidateKey(Model $subject)
+    {
+        $candidateKey = (array) $this->getCandidateKey();
+
+        if (empty($candidateKey)) {
+            $candidateKey = (array) $subject->getKey();
+        }
+
+        return $candidateKey;
+    }
+
+    /**
+     * @param   Model   $source
+     *
+     * @return  array
+     */
+    public function resolve(Model $source)
+    {
+        $name = $this->getName();
+
+        $candidateKey = $this->resolveCandidateKey($source);
+
+        if (empty($candidateKey)) {
+            throw new \RuntimeException(sprintf(
+                "Can't join relation '%s' on table '%s' in model '%s'. No candidate key found.",
+                $name,
+                $source->getTableName(),
+                static::class
+            ));
+        }
+
+        $foreignKey = $this->resolveForeignKey($source);
+
+        if (count($foreignKey) !== count($candidateKey)) {
+            throw new \RuntimeException(sprintf(
+                "Can't join relation '%s' on table '%s' in model '%s'."
+                . " Foreign key count (%s) does not match candidate key count (%s).",
+                $name,
+                $source->getTableName(),
+                static::class,
+                implode(', ', $foreignKey),
+                implode(', ', $candidateKey)
+            ));
+        }
+
+        $tableAlias = $source->getTableAlias();
+
+        $target = $this->getTarget();
+        $targetTableAlias = $target->getTableAlias();
+
+        $condition = [];
+
+        foreach ($foreignKey as $k => $fk) {
+            $condition[] = sprintf('%s.%s = %s.%s', $targetTableAlias, $fk, $tableAlias, $candidateKey[$k]);
+        }
+
+        return [
+            [$targetTableAlias, $target->getTableName(), $condition]
+        ];
+    }
 }

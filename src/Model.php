@@ -213,74 +213,26 @@ class Model
                 continue;
             }
 
-            $tableName = $source->getTableName();
-
             if (! $source->hasRelation($name)) {
                 throw new \RuntimeException(sprintf(
                     "Can't join relation '%s' on table '%s' in model '%s'. Relation not found.",
                     $name,
-                    $tableName,
+                    $source->getTableName(),
                     static::class
                 ));
             }
 
-            $key = (array) $source->getKey();
+            $select = $this->getSelect();
 
             $relation = $source->getRelation($name);
 
-            $candidateKey = (array) $relation->getCandidateKey();
-
-            if (empty($candidateKey)) {
-                $candidateKey = $key;
+            foreach ($relation->resolve($source) as list($targetTableAlias, $targetTableName, $condition)) {
+                $select->join([$targetTableAlias => $targetTableName], $condition);
             }
-
-            if (empty($candidateKey)) {
-                throw new \RuntimeException(sprintf(
-                    "Can't join relation '%s' on table '%s' in model '%s'. No candidate key found.",
-                    $name,
-                    $tableName,
-                    static::class
-                ));
-            }
-
-            $foreignKey = (array) $relation->getForeignKey();
-
-            if (empty($foreignKey)) {
-                $foreignKey = array_map(
-                    function ($key) use ($tableName) {
-                        return "{$tableName}_{$key}";
-                    },
-                    $key
-                );
-            }
-
-            if (count($foreignKey) !== count($candidateKey)) {
-                throw new \RuntimeException(sprintf(
-                    "Can't join relation '%s' on table '%s' in model '%s'."
-                    . " Foreign key count (%s) does not match candidate key count (%s).",
-                    $name,
-                    $tableName,
-                    static::class,
-                    implode(', ', $foreignKey),
-                    implode(', ', $candidateKey)
-                ));
-            }
-
-            $tableAlias = $source->getTableAlias();
 
             $target = $relation->getTarget();
-            $targetTableAlias = $target->getTableAlias();
 
-            $condition = [];
-
-            foreach ($foreignKey as $k => $fk) {
-                $condition[] = sprintf('%s.%s = %s.%s', $targetTableAlias, $fk, $tableAlias, $candidateKey[$k]);
-            }
-
-            $this
-                ->getSelect()
-                ->join([$targetTableAlias => $target->getTableName()], $condition)
-                ->columns($target->getColumnsQualified());
+            $select->columns($target->getColumnsQualified());
 
             $this->with[$path] = $relation;
 
