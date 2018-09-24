@@ -177,6 +177,18 @@ class Model
         return $this->select;
     }
 
+    /**
+     * @param   Sql\Select  $select
+     *
+     * @return  $this
+     */
+    public function setSelect(Sql\Select $select)
+    {
+        $this->select = $select;
+
+        return $this;
+    }
+
     public function with($relations)
     {
         $processed = [];
@@ -217,18 +229,6 @@ class Model
 
             $source = $target;
         }
-
-        return $this;
-    }
-
-    /**
-     * @param   Sql\Select  $select
-     *
-     * @return  $this
-     */
-    public function setSelect(Sql\Select $select)
-    {
-        $this->select = $select;
 
         return $this;
     }
