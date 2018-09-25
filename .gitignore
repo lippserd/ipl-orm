@@ -4,6 +4,9 @@
 # Except those related to Git
 !.git*
 
+# And travis
+!.travis.yml
+
 # Exclude composer related files
 composer.lock
 vendor/
