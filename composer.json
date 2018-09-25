@@ -40,7 +40,8 @@
     }
   },
   "scripts": {
-    "test": "vendor/bin/phpunit",
+    "test": "vendor/bin/phpunit --no-coverage",
+    "test-dev": "vendor/bin/phpunit",
     "checkstyle": "vendor/bin/phpcs"
   }
 }
