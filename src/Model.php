@@ -254,43 +254,48 @@ class Model
 
     public function with($relations)
     {
-        $processed = [];
+        $relations = is_string($relations) ? func_get_args() : $relations;
 
-        $source = $this;
+        foreach ($relations as $path) {
+            $source = $this;
 
-        foreach (explode('.', $relations) as $name) {
-            $processed[] = $name;
-            $path = implode('.', $processed);
+            $processed = [];
 
-            if (isset($this->with[$path])) {
-                $source = $this->with[$path]->getTarget();
-                continue;
+            foreach (explode('.', $path) as $name) {
+                $processed[] = $name;
+
+                $current = implode('.', $processed);
+
+                if (isset($this->with[$current])) {
+                    $source = $this->with[$current]->getTarget();
+                    continue;
+                }
+
+                if (! $source->hasRelation($name)) {
+                    throw new \RuntimeException(sprintf(
+                        "Can't join relation '%s' on table '%s' in model '%s'. Relation not found.",
+                        $name,
+                        $source->getTableName(),
+                        static::class
+                    ));
+                }
+
+                $select = $this->getSelect();
+
+                $relation = $source->getRelation($name);
+
+                foreach ($relation->resolve($source) as list($targetTableAlias, $targetTableName, $condition)) {
+                    $select->join([$targetTableAlias => $targetTableName], $condition);
+                }
+
+                $target = $relation->getTarget();
+
+                $select->columns($target->getColumnsQualified($name));
+
+                $this->with[$current] = $relation;
+
+                $source = $target;
             }
-
-            if (! $source->hasRelation($name)) {
-                throw new \RuntimeException(sprintf(
-                    "Can't join relation '%s' on table '%s' in model '%s'. Relation not found.",
-                    $name,
-                    $source->getTableName(),
-                    static::class
-                ));
-            }
-
-            $select = $this->getSelect();
-
-            $relation = $source->getRelation($name);
-
-            foreach ($relation->resolve($source) as list($targetTableAlias, $targetTableName, $condition)) {
-                $select->join([$targetTableAlias => $targetTableName], $condition);
-            }
-
-            $target = $relation->getTarget();
-
-            $select->columns($target->getColumnsQualified($name));
-
-            $this->with[$path] = $relation;
-
-            $source = $target;
         }
 
         return $this;

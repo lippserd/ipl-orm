@@ -519,6 +519,52 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $product->select('product.name', 'shop.country');
     }
 
+    public function testWithVariadic()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKey('id')
+            ->setColumns(['name', 'rrp']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setColumns(['name', 'city']);
+
+        $product->hasMany('retail', $shop);
+        $product->hasMany('digital', $shop);
+
+        $this->assertSql(
+            $product->with('retail', 'digital')->getSelect(),
+            'SELECT product.name, product.rrp, retail.name, retail.city, digital.name, digital.city'
+            . ' FROM product product'
+            . ' INNER JOIN shop retail ON retail.product_id = product.id'
+            . ' INNER JOIN shop digital ON digital.product_id = product.id'
+        );
+    }
+
+    public function testWithArray()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKey('id')
+            ->setColumns(['name', 'rrp']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setColumns(['name', 'city']);
+
+        $product->hasMany('retail', $shop);
+        $product->hasMany('digital', $shop);
+
+        $this->assertSql(
+            $product->with(['retail', 'digital'])->getSelect(),
+            'SELECT product.name, product.rrp, retail.name, retail.city, digital.name, digital.city'
+            . ' FROM product product'
+            . ' INNER JOIN shop retail ON retail.product_id = product.id'
+            . ' INNER JOIN shop digital ON digital.product_id = product.id'
+        );
+    }
+
     public function assertSql($query, $sql, $values = null)
     {
         list($stmt, $bind) = $this->queryBuilder->assemble($query);
