@@ -60,6 +60,16 @@ class Model
     }
 
     /**
+     * @param   string  $column
+     *
+     * @return  bool
+     */
+    public function hasColumn($column)
+    {
+        return in_array($column, $this->columns);
+    }
+
+    /**
      * @return  array|null
      */
     public function getColumns()
@@ -185,6 +195,59 @@ class Model
     public function setSelect(Sql\Select $select)
     {
         $this->select = $select;
+
+        return $this;
+    }
+
+    /**
+     * @param   array|string    $columns
+     *
+     * @return  $this
+     */
+    public function select($columns)
+    {
+        $columns = is_string($columns) ? func_get_args() : $columns;
+
+        $tableName = $this->getTableName();
+
+        $processed = [];
+
+        foreach ($columns as $path) {
+            $dot = strrpos($path, '.');
+
+            if ($dot === false) {
+                $target = $this;
+
+                $column = $path;
+            } else {
+                $relation = substr($path, 0, $dot);
+
+                $column = substr($path, $dot + 1);
+
+                if ($relation === $tableName) {
+                    $target = $this;
+                } else {
+                    $this->with($relation);
+
+                    $target = $this->with[$relation]->getTarget();
+                }
+            }
+
+            if (! $target->hasColumn($column)) {
+                throw new \RuntimeException(sprintf(
+                    "Can't select column '%s' from table '%s' in model '%s'. Column not found.",
+                    $column,
+                    $target->getTableName(),
+                    static::class
+                ));
+            }
+
+            $processed[] = $path;
+        }
+
+        $this->getSelect()
+            ->resetColumns()
+            ->columns($processed);
 
         return $this;
     }

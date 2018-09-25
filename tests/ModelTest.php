@@ -472,6 +472,53 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         );
     }
 
+    public function testSelectManyViaRelationWithExplicitColumnsToSelect()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKey('id')
+            ->setColumns(['name', 'rrp']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setKey('id')
+            ->setColumns(['name', 'city']);
+
+        $product
+            ->hasMany('shop', $shop)
+            ->setVia('shop_product');
+
+        $this->assertSql(
+            $product->select('product.name', 'shop.name')->getSelect(),
+            'SELECT product.name, shop.name'
+            . ' FROM product product'
+            . ' INNER JOIN shop_product shop_product ON shop_product.product_id = product.id'
+            . ' INNER JOIN shop shop ON shop.id = shop_product.shop_id'
+        );
+    }
+
+    /**
+     * @expectedException \RuntimeException
+     */
+    public function testSelectManyViaRelationWithExplicitColumnsToSelectThrowsExceptionIfColumnDoesNotExist()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKey('id')
+            ->setColumns(['name', 'rrp']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setKey('id')
+            ->setColumns(['name', 'city']);
+
+        $product
+            ->hasMany('shop', $shop)
+            ->setVia('shop_product');
+
+        $product->select('product.name', 'shop.country');
+    }
+
     public function assertSql($query, $sql, $values = null)
     {
         list($stmt, $bind) = $this->queryBuilder->assemble($query);
