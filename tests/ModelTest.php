@@ -565,6 +565,32 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         );
     }
 
+    public function testNoDb()
+    {
+        $model = new Orm\Model();
+
+        $this->assertNull($model->getDb());
+    }
+
+    public function testDb()
+    {
+        $db = new TestConnection();
+
+        $model = (new Orm\Model())
+            ->setDb($db);
+
+        $this->assertSame($db, $model->getDb());
+    }
+
+    public function testOn()
+    {
+        $db = new TestConnection();
+
+        $model = Orm\Model::on($db);
+
+        $this->assertSame($db, $model->getDb());
+    }
+
     public function assertSql($query, $sql, $values = null)
     {
         list($stmt, $bind) = $this->queryBuilder->assemble($query);

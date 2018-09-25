@@ -6,6 +6,9 @@ use ipl\Sql;
 
 class Model
 {
+    /** @var Sql\Connection */
+    protected $db;
+
     /** @var string */
     protected $tableName;
 
@@ -23,6 +26,37 @@ class Model
 
     /** @var Relation[] */
     protected $with;
+
+    /**
+     * @param   Sql\Connection  $db
+     *
+     * @return  static
+     */
+    public static function on(Sql\Connection $db)
+    {
+        return (new static())
+            ->setDb($db);
+    }
+
+    /**
+     * @return  Sql\Connection|null
+     */
+    public function getDb()
+    {
+        return $this->db;
+    }
+
+    /**
+     * @param   Sql\Connection  $db
+     *
+     * @return  $this
+     */
+    public function setDb(Sql\Connection $db)
+    {
+        $this->db = $db;
+
+        return $this;
+    }
 
     /**
      * @return  string|null
