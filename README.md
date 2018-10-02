@@ -1,6 +1,6 @@
 # Icinga PHP Library - ORM
 
-[![Build Status](https://travis-ci.org/lippserd/ipl-orm.svg?branch=master)](https://travis-ci.org/lippserd/ipl-orm)
+[![Build Status](https://travis-ci.com/lippserd/ipl-orm.svg?branch=master)](https://travis-ci.com/lippserd/ipl-orm)
 
 ## Requirements
 
