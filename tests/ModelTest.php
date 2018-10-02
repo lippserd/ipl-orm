@@ -7,6 +7,8 @@ use ipl\Sql;
 
 class ModelTest extends \PHPUnit_Framework_TestCase
 {
+    use Fixtures;
+
     /** @var Sql\QueryBuilder */
     protected $queryBuilder;
 
@@ -589,6 +591,24 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $model = Orm\Model::on($db);
 
         $this->assertSame($db, $model->getDb());
+    }
+
+    public function testQuery()
+    {
+        $model = (Orm\Model::on($this->getFixturesDb()))
+            ->setTableName('product')
+            ->setColumns(['name']);
+
+        $this->assertInstanceOf('\PDOStatement', $model->query());
+    }
+
+    public function testGetIterator()
+    {
+        $model = (Orm\Model::on($this->getFixturesDb()))
+            ->setTableName('product')
+            ->setColumns(['name']);
+
+        $this->assertInstanceOf('\PDOStatement', $model->getIterator());
     }
 
     public function assertSql($query, $sql, $values = null)

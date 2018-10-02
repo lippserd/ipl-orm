@@ -4,7 +4,7 @@ namespace ipl\Orm;
 
 use ipl\Sql;
 
-class Model
+class Model implements \IteratorAggregate
 {
     /** @var Sql\Connection */
     protected $db;
@@ -333,6 +333,22 @@ class Model
         }
 
         return $this;
+    }
+
+    /**
+     * @return  \PDOStatement
+     */
+    public function query()
+    {
+        return $this->getDb()->select($this->getSelect());
+    }
+
+    /**
+     * @return  \PDOStatement
+     */
+    public function getIterator()
+    {
+        return $this->query();
     }
 
     private function assertRelationDoesNotYetExist($name)
