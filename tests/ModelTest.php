@@ -595,7 +595,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
     public function testQuery()
     {
-        $model = (Orm\Model::on($this->getFixturesDb()))
+        $model = Orm\Model::on($this->getFixturesDb())
             ->setTableName('product')
             ->setColumns(['name']);
 
@@ -604,7 +604,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
     public function testGetIterator()
     {
-        $model = (Orm\Model::on($this->getFixturesDb()))
+        $model = Orm\Model::on($this->getFixturesDb())
             ->setTableName('product')
             ->setColumns(['name']);
 
