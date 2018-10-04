@@ -599,7 +599,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
             ->setTableName('product')
             ->setColumns(['name']);
 
-        $this->assertInstanceOf('\PDOStatement', $model->query());
+        $this->assertInstanceOf('\Generator', $model->query());
     }
 
     public function testGetIterator()
@@ -608,7 +608,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
             ->setTableName('product')
             ->setColumns(['name']);
 
-        $this->assertInstanceOf('\PDOStatement', $model->getIterator());
+        $this->assertInstanceOf('\Generator', $model->getIterator());
     }
 
     public function assertSql($query, $sql, $values = null)

@@ -336,15 +336,17 @@ class Model implements \IteratorAggregate
     }
 
     /**
-     * @return  \PDOStatement
+     * @return  \Generator
      */
     public function query()
     {
-        return $this->getDb()->select($this->getSelect());
+        foreach ($this->getDb()->select($this->getSelect()) as $row) {
+            yield $row;
+        }
     }
 
     /**
-     * @return  \PDOStatement
+     * @return  \Generator
      */
     public function getIterator()
     {
