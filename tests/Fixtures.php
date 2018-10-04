@@ -6,7 +6,10 @@ use ipl\Sql;
 
 trait Fixtures
 {
-    public function getFixturesDb()
+    /** @var Sql\Connection */
+    private $fixturesDb;
+
+    public function initFixturesDb()
     {
         $db = new Sql\Connection([
             'db' => 'sqlite',
@@ -17,6 +20,11 @@ trait Fixtures
 
         $db->exec($fixtures);
 
-        return $db;
+        $this->fixturesDb = $db;
+    }
+
+    public function getFixturesDb()
+    {
+        return $this->fixturesDb;
     }
 }

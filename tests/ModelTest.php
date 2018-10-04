@@ -15,6 +15,8 @@ class ModelTest extends \PHPUnit_Framework_TestCase
     public function setUp()
     {
         $this->queryBuilder = new Sql\QueryBuilder(new TestAdapter());
+
+        $this->initFixturesDb();
     }
 
     public function testNoTableName()
@@ -609,6 +611,13 @@ class ModelTest extends \PHPUnit_Framework_TestCase
             ->setColumns(['name']);
 
         $this->assertInstanceOf('\Generator', $model->getIterator());
+    }
+
+    public function testModelCreation()
+    {
+        $products = Product::on($this->getFixturesDb())->query();
+
+        $this->assertInstanceOf(Product::class, $products->current());
     }
 
     public function assertSql($query, $sql, $values = null)

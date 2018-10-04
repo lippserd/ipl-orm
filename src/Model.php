@@ -6,6 +6,8 @@ use ipl\Sql;
 
 class Model implements \IteratorAggregate
 {
+    use Properties;
+
     /** @var Sql\Connection */
     protected $db;
 
@@ -341,7 +343,7 @@ class Model implements \IteratorAggregate
     public function query()
     {
         foreach ($this->getDb()->select($this->getSelect()) as $row) {
-            yield $row;
+            yield (new static())->setProperties($row);
         }
     }
 
