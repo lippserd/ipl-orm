@@ -620,6 +620,21 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $this->assertInstanceOf(Product::class, $products->current());
     }
 
+    public function testSortRules()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setColumns(['name'])
+            ->setSortRules(['product.name']);
+
+        $this->assertSql(
+            $product->select('product.name')->getSelect(),
+            'SELECT product.name'
+            . ' FROM product product'
+            . ' ORDER BY product.name'
+        );
+    }
+
     public function assertSql($query, $sql, $values = null)
     {
         list($stmt, $bind) = $this->queryBuilder->assemble($query);

@@ -29,6 +29,9 @@ class Model implements \IteratorAggregate
     /** @var Relation[] */
     protected $with;
 
+    /** @var array */
+    protected $sortRules = [];
+
     /**
      * @param   Sql\Connection  $db
      *
@@ -206,6 +209,26 @@ class Model implements \IteratorAggregate
     }
 
     /**
+     * @return  array
+     */
+    public function getSortRules()
+    {
+        return $this->sortRules;
+    }
+
+    /**
+     * @param   array   $sortRules
+     *
+     * @return  $this
+     */
+    public function setSortRules(array $sortRules)
+    {
+        $this->sortRules = $sortRules;
+
+        return $this;
+    }
+
+    /**
      * @return  Sql\Select
      */
     public function getSelect()
@@ -217,7 +240,8 @@ class Model implements \IteratorAggregate
 
             $this->select = (new Sql\Select())
                 ->from($from)
-                ->columns($this->getColumnsQualified($tableName));
+                ->columns($this->getColumnsQualified($tableName))
+                ->orderBy($this->sortRules);
         }
 
         return $this->select;
