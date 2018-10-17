@@ -41,8 +41,8 @@
     }
   },
   "scripts": {
-    "test": "vendor/bin/phpunit --no-coverage",
-    "test-dev": "vendor/bin/phpunit",
-    "checkstyle": "vendor/bin/phpcs"
+    "test": "phpunit --no-coverage --testdox || phpunit --no-coverage --verbose",
+    "test-dev": "phpunit --testdox || phpunit --verbose",
+    "checkstyle": "phpcs"
   }
 }
