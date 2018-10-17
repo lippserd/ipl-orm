@@ -8,6 +8,9 @@ class Model implements \IteratorAggregate
 {
     use Properties;
 
+    /** @var bool */
+    protected $new = true;
+
     /** @var Sql\Connection */
     protected $db;
 
@@ -41,6 +44,26 @@ class Model implements \IteratorAggregate
     {
         return (new static())
             ->setDb($db);
+    }
+
+    /**
+     * @return  bool
+     */
+    public function isNew()
+    {
+        return $this->new;
+    }
+
+    /**
+     * @param   bool    $new
+     *
+     * @return  $this
+     */
+    public function setNew($new)
+    {
+        $this->new = (bool) $new;
+
+        return $this;
     }
 
     /**
@@ -367,7 +390,9 @@ class Model implements \IteratorAggregate
     public function query()
     {
         foreach ($this->getDb()->select($this->getSelect()) as $row) {
-            yield (new static())->setProperties($row);
+            yield (new static())
+                ->setProperties($row)
+                ->setNew(false);
         }
     }
 
@@ -377,6 +402,28 @@ class Model implements \IteratorAggregate
     public function getIterator()
     {
         return $this->query();
+    }
+
+    public function __call($name, $arguments)
+    {
+        if (! $this->hasRelation($name)) {
+            throw new \InvalidArgumentException("Relation '$name' does not exist");
+        }
+
+        if ($this->isNew()) {
+            throw new \RuntimeException("Can\'t fetch relational data for new models");
+        }
+
+        $relation = $this->relations[$name];
+        $target = $relation->getTarget();
+        $tableAlias = $target->getTableName();
+        $select = $target->getSelect();
+
+        foreach ($relation->resolveConditions($this) as $fk => $ck) {
+            $select->where(["$tableAlias.$fk = ?" => $this->getProperty($ck)]);
+        }
+
+        return $target;
     }
 
     private function assertRelationDoesNotYetExist($name)

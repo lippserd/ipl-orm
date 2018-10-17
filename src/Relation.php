@@ -97,62 +97,12 @@ class Relation
     }
 
     /**
-     * @param   Model   $source
-     *
-     * @return  array
-     */
-    public function resolve(Model $source)
-    {
-        $name = $this->getName();
-
-        $candidateKey = $this->resolveCandidateKey($source, $this->getCandidateKey());
-
-        if (empty($candidateKey)) {
-            throw new \RuntimeException(sprintf(
-                "Can't join relation '%s' on table '%s' in model '%s'. No candidate key found.",
-                $name,
-                $source->getTableName(),
-                static::class
-            ));
-        }
-
-        $foreignKey = $this->resolveForeignKey($source, $this->getForeignKey());
-
-        if (count($foreignKey) !== count($candidateKey)) {
-            throw new \RuntimeException(sprintf(
-                "Can't join relation '%s' on table '%s' in model '%s'."
-                . " Foreign key count (%s) does not match candidate key count (%s).",
-                $name,
-                $source->getTableName(),
-                static::class,
-                implode(', ', $foreignKey),
-                implode(', ', $candidateKey)
-            ));
-        }
-
-        $tableAlias = $source->getTableName();
-
-        $target = $this->getTarget();
-        $targetTableAlias = $this->getName();
-
-        $condition = [];
-
-        foreach ($foreignKey as $k => $fk) {
-            $condition[] = sprintf('%s.%s = %s.%s', $targetTableAlias, $fk, $tableAlias, $candidateKey[$k]);
-        }
-
-        return [
-            [$targetTableAlias, $target->getTableName(), $condition]
-        ];
-    }
-
-    /**
      * @param   Model           $subject
      * @param   string|array    $foreignKey
      *
      * @return  array
      */
-    protected function resolveForeignKey(Model $subject, $foreignKey)
+    public function resolveForeignKey(Model $subject, $foreignKey)
     {
         $foreignKey = (array) $foreignKey;
 
@@ -176,7 +126,7 @@ class Relation
      *
      * @return  array
      */
-    protected function resolveCandidateKey(Model $subject, $candidateKey)
+    public function resolveCandidateKey(Model $subject, $candidateKey)
     {
         $candidateKey = (array) $candidateKey;
 
@@ -185,5 +135,63 @@ class Relation
         }
 
         return $candidateKey;
+    }
+
+    public function resolveConditions(Model $subject)
+    {
+        $name = $this->getName();
+
+        $candidateKey = $this->resolveCandidateKey($subject, $this->getCandidateKey());
+
+        if (empty($candidateKey)) {
+            throw new \RuntimeException(sprintf(
+                "Can't join relation '%s' on table '%s' in model '%s'. No candidate key found.",
+                $name,
+                $subject->getTableName(),
+                static::class
+            ));
+        }
+
+        $foreignKey = $this->resolveForeignKey($subject, $this->getForeignKey());
+
+        if (count($foreignKey) !== count($candidateKey)) {
+            throw new \RuntimeException(sprintf(
+                "Can't join relation '%s' on table '%s' in model '%s'."
+                . " Foreign key count (%s) does not match candidate key count (%s).",
+                $name,
+                $subject->getTableName(),
+                static::class,
+                implode(', ', $foreignKey),
+                implode(', ', $candidateKey)
+            ));
+        }
+
+        foreach ($foreignKey as $k => $fk) {
+            yield $fk => $candidateKey[$k];
+        }
+    }
+
+    /**
+     * @param   Model   $subject
+     *
+     * @return  array
+     */
+    public function resolve(Model $subject)
+    {
+        $conditions = $this->resolveConditions($subject);
+
+        $tableAlias = $subject->getTableName();
+
+        $targetTableAlias = $this->getName();
+
+        $condition = [];
+
+        foreach ($conditions as $fk => $ck) {
+            $condition[] = sprintf('%s.%s = %s.%s', $targetTableAlias, $fk, $tableAlias, $ck);
+        }
+
+        return [
+            [$targetTableAlias, $this->getTarget()->getTableName(), $condition]
+        ];
     }
 }

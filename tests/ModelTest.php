@@ -635,6 +635,48 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         );
     }
 
+    /** @expectedException \InvalidArgumentException */
+    public function testAccessRelationalDataThroughRelationNameThrowsExceptionIfRelationDoesNotExist()
+    {
+        (new Orm\Model())->shop();
+    }
+
+    /** @expectedException \RuntimeException */
+    public function testAccessRelationalDataThroughRelationNameThrowsExceptionForNewModels()
+    {
+        $product = (new Orm\Model());
+
+        $shop = (new Orm\Model());
+
+        $product->hasMany('shop', $shop);
+
+        $product->shop();
+    }
+
+    public function testAccessRelationalDataThroughRelationName()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKey('id')
+            ->setColumns(['name'])
+            ->setProperties(['id' => 1])
+            ->setNew(false);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setColumns(['name']);
+
+        $product->hasMany('shop', $shop);
+
+        $this->assertSql(
+            $product->shop()->getSelect(),
+            'SELECT shop.name'
+            . ' FROM shop shop'
+            . ' WHERE shop.product_id = ?',
+            [1]
+        );
+    }
+
     public function assertSql($query, $sql, $values = null)
     {
         list($stmt, $bind) = $this->queryBuilder->assemble($query);

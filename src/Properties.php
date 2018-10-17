@@ -5,7 +5,7 @@ namespace ipl\Orm;
 trait Properties
 {
     /** @var array */
-    protected $properties;
+    protected $properties = [];
 
     public function getProperty($key)
     {
