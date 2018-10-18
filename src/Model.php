@@ -117,7 +117,7 @@ class Model implements \IteratorAggregate
             function ($column) use ($prefix) {
                 return $prefix . '.' . $column;
             },
-            $this->getColumns()
+            (array) $this->getColumns()
         );
     }
 
