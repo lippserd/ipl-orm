@@ -45,8 +45,17 @@ class Model implements \IteratorAggregate
      */
     public static function on(Sql\Connection $db)
     {
-        return (new static())
+        $model = (new static())
             ->setDb($db);
+
+        $model->init();
+
+        return $model;
+    }
+
+    protected function init()
+    {
+
     }
 
     /**
@@ -425,9 +434,13 @@ class Model implements \IteratorAggregate
     public function query()
     {
         foreach ($this->getDb()->select($this->getSelect()) as $row) {
-            yield (new static())
+            $model = clone $this;
+
+            $model
                 ->setProperties($row)
                 ->setNew(false);
+
+            yield $model;
         }
     }
 
@@ -451,7 +464,7 @@ class Model implements \IteratorAggregate
 
         $relation = $this->relations[$name];
 
-        $target = $relation->getTarget();
+        $target = clone $relation->getTarget();
 
         $conditions = $relation->resolveConditions($this);
 
@@ -486,6 +499,8 @@ class Model implements \IteratorAggregate
         foreach ($conditions as $fk => $ck) {
             $select->where(["$conditionsTarget.$fk = ?" => $this->getProperty($ck)]);
         }
+
+        $target->setDb($this->getDb());
 
         return $target;
     }
