@@ -91,8 +91,9 @@ class Model implements \IteratorAggregate
      *
      * @return  $this
      */
-    public function setDb(Sql\Connection $db)
+    public function setDb(Sql\Connection $db = null)
     {
+        // Supports null for resetting the connection
         $this->db = $db;
 
         return $this;
@@ -119,31 +120,6 @@ class Model implements \IteratorAggregate
     }
 
     /**
-     * @param   string  $prefix
-     *
-     * @return  array
-     */
-    public function getColumnsQualified($prefix)
-    {
-        return array_map(
-            function ($column) use ($prefix) {
-                return $prefix . '.' . $column;
-            },
-            (array) $this->getColumns()
-        );
-    }
-
-    /**
-     * @param   string  $column
-     *
-     * @return  bool
-     */
-    public function hasColumn($column)
-    {
-        return in_array($column, $this->columns);
-    }
-
-    /**
      * @return  array|null
      */
     public function getColumns()
@@ -161,6 +137,36 @@ class Model implements \IteratorAggregate
         $this->columns = $columns;
 
         return $this;
+    }
+
+    /**
+     * @param   string  $prefix
+     *
+     * @return  array
+     */
+    public function getColumnsQualified($prefix)
+    {
+        $qualified = [];
+
+        foreach ((array) $this->getColumns() as $alias => $column) {
+            if (is_int($alias)) {
+                $column = $prefix . '.' . $column;
+            }
+
+            $qualified[$alias] = $column;
+        }
+
+        return $qualified;
+    }
+
+    /**
+     * @param   string  $column
+     *
+     * @return  bool
+     */
+    public function hasColumn($column)
+    {
+        return in_array($column, $this->columns) || isset($this->columns[$column]);
     }
 
     /**

@@ -712,6 +712,18 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         );
     }
 
+    public function testCustomSelectColumns()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setColumns(['name' => 'LOWER(product.name)']);
+
+        $this->assertSql(
+            $product->getSelect(),
+            'SELECT LOWER(product.name) AS name FROM product product'
+        );
+    }
+
     public function assertSql($query, $sql, $values = null)
     {
         list($stmt, $bind) = $this->queryBuilder->assemble($query);
