@@ -8,6 +8,9 @@ class Relation
     protected $name;
 
     /** @var Model */
+    protected $subject;
+
+    /** @var Model */
     protected $target;
 
     /** @var string|array */
@@ -37,6 +40,26 @@ class Relation
     }
 
     /**
+     * @return Model
+     */
+    public function getSubject()
+    {
+        return $this->subject;
+    }
+
+    /**
+     * @param   Model   $subject
+     *
+     * @return  $this
+     */
+    public function setSubject(Model $subject)
+    {
+        $this->subject = $subject;
+
+        return $this;
+    }
+
+    /**
      * @return  Model|null
      */
     public function getTarget()
@@ -49,7 +72,7 @@ class Relation
      *
      * @return  $this
      */
-    public function setTarget($target)
+    public function setTarget(Model $target)
     {
         $this->target = $target;
 
@@ -172,12 +195,12 @@ class Relation
     }
 
     /**
-     * @param   Model   $subject
-     *
      * @return  array
      */
-    public function resolve(Model $subject)
+    public function resolve()
     {
+        $subject = $this->getSubject();
+
         $conditions = $this->resolveConditions($subject);
 
         $tableAlias = $subject->getTableName();

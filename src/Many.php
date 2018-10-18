@@ -78,7 +78,7 @@ class Many extends Relation
      *
      * @return  array
      */
-    public function resolve(Model $subject)
+    public function resolve()
     {
         $viaTable = $this->getVia();
 
@@ -90,13 +90,15 @@ class Many extends Relation
             $viaRelation
                 ->setVia(null)
                 ->setName($viaTable)
+                ->setSubject($this->getSubject())
                 ->setTarget($intermediate);
 
-            $resolved = $viaRelation->resolve($subject);
+            $resolved = $viaRelation->resolve();
 
             $monkey = clone $this;
             $monkey
                 ->setVia(null)
+                ->setSubject($intermediate)
                 ->setCandidateKey($this->resolveForeignKey(
                     $this->getTarget(),
                     $this->getTargetForeignKey()
@@ -106,11 +108,11 @@ class Many extends Relation
                     $this->getTargetCandidateKey()
                 ));
 
-            $resolved = array_merge($resolved, $monkey->resolve($intermediate));
+            $resolved = array_merge($resolved, $monkey->resolve());
 
             return $resolved;
         } else {
-            return parent::resolve($subject);
+            return parent::resolve();
         }
     }
 }

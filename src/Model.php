@@ -23,17 +23,20 @@ class Model implements \IteratorAggregate
     /** @var string|array */
     protected $key;
 
+    /** @var array */
+    protected $sortRules = [];
+
     /** @var Relation[] */
     protected $relations;
 
     /** @var Sql\Select */
     protected $select;
 
-    /** @var Relation[] */
-    protected $with;
-
     /** @var array */
-    protected $sortRules = [];
+    protected $selectColumns = [];
+
+    /** @var Relation[] */
+    protected $with = [];
 
     /**
      * @param   Sql\Connection  $db
@@ -172,6 +175,26 @@ class Model implements \IteratorAggregate
     }
 
     /**
+     * @return  array
+     */
+    public function getSortRules()
+    {
+        return $this->sortRules;
+    }
+
+    /**
+     * @param   array   $sortRules
+     *
+     * @return  $this
+     */
+    public function setSortRules(array $sortRules)
+    {
+        $this->sortRules = $sortRules;
+
+        return $this;
+    }
+
+    /**
      * @param   string  $name
      * @param   Model   $target
      *
@@ -185,6 +208,7 @@ class Model implements \IteratorAggregate
 
         $relation = (new Many())
             ->setName($name)
+            ->setSubject($this)
             ->setTarget($target);
 
         $this->relations[$name] = $relation;
@@ -198,6 +222,18 @@ class Model implements \IteratorAggregate
     public function getRelations()
     {
         return $this->relations;
+    }
+
+    /**
+     * @param   array   $relations
+     *
+     * @return  $this
+     */
+    public function setRelations(array $relations)
+    {
+        $this->relations = $relations;
+
+        return $this;
     }
 
     /**
@@ -232,29 +268,9 @@ class Model implements \IteratorAggregate
     }
 
     /**
-     * @return  array
-     */
-    public function getSortRules()
-    {
-        return $this->sortRules;
-    }
-
-    /**
-     * @param   array   $sortRules
-     *
-     * @return  $this
-     */
-    public function setSortRules(array $sortRules)
-    {
-        $this->sortRules = $sortRules;
-
-        return $this;
-    }
-
-    /**
      * @return  Sql\Select
      */
-    public function getSelect()
+    public function getSelectBase()
     {
         if ($this->select === null) {
             $tableName = $this->getTableName();
@@ -262,12 +278,79 @@ class Model implements \IteratorAggregate
             $from = [$tableName => $tableName];
 
             $this->select = (new Sql\Select())
-                ->from($from)
-                ->columns($this->getColumnsQualified($tableName))
-                ->orderBy($this->sortRules);
+                ->from($from);
         }
 
         return $this->select;
+    }
+
+    /**
+     * @return  Sql\Select
+     */
+    public function getSelect()
+    {
+        $tableName = $this->getTableName();
+
+        $select = clone $this->getSelectBase();
+
+        if (! empty($this->selectColumns)) {
+            $autoColumns = false;
+
+            $selectColumns = [];
+
+            foreach ($this->selectColumns as $path) {
+                $dot = strrpos($path, '.');
+
+                if ($dot === false) {
+                    $target = $this;
+
+                    $column = $path;
+                } else {
+                    $relation = substr($path, 0, $dot);
+
+                    $column = substr($path, $dot + 1);
+
+                    if ($relation === $tableName) {
+                        $target = $this;
+                    } else {
+                        $this->with($relation);
+
+                        $target = $this->with[$relation]->getTarget();
+                    }
+                }
+
+                if (! $target->hasColumn($column)) {
+                    throw new \RuntimeException(sprintf(
+                        "Can't select column '%s' from table '%s' in model '%s'. Column not found.",
+                        $column,
+                        $target->getTableName(),
+                        static::class
+                    ));
+                }
+
+                $selectColumns[] = $path;
+            }
+        } else {
+            $autoColumns = true;
+
+            $selectColumns = $this->getColumnsQualified($tableName);
+        }
+
+        $select->columns($selectColumns);
+
+        $select->orderBy($this->sortRules);
+
+        foreach ($this->with as $relation) {
+            foreach ($relation->resolve() as list($targetTableAlias, $targetTableName, $condition)) {
+                $select->join([$targetTableAlias => $targetTableName], $condition);
+            }
+
+            if ($autoColumns) {
+                $select->columns($relation->getTarget()->getColumnsQualified($relation->getName()));
+            }
+        }
+
+        return $select;
     }
 
     /**
@@ -289,48 +372,10 @@ class Model implements \IteratorAggregate
      */
     public function select($columns)
     {
-        $columns = is_string($columns) ? func_get_args() : $columns;
-
-        $tableName = $this->getTableName();
-
-        $processed = [];
-
-        foreach ($columns as $path) {
-            $dot = strrpos($path, '.');
-
-            if ($dot === false) {
-                $target = $this;
-
-                $column = $path;
-            } else {
-                $relation = substr($path, 0, $dot);
-
-                $column = substr($path, $dot + 1);
-
-                if ($relation === $tableName) {
-                    $target = $this;
-                } else {
-                    $this->with($relation);
-
-                    $target = $this->with[$relation]->getTarget();
-                }
-            }
-
-            if (! $target->hasColumn($column)) {
-                throw new \RuntimeException(sprintf(
-                    "Can't select column '%s' from table '%s' in model '%s'. Column not found.",
-                    $column,
-                    $target->getTableName(),
-                    static::class
-                ));
-            }
-
-            $processed[] = $path;
-        }
-
-        $this->getSelect()
-            ->resetColumns()
-            ->columns($processed);
+        $this->selectColumns = array_merge(
+            $this->selectColumns,
+            is_string($columns) ? func_get_args() : $columns
+        );
 
         return $this;
     }
@@ -340,7 +385,7 @@ class Model implements \IteratorAggregate
         $relations = is_string($relations) ? func_get_args() : $relations;
 
         foreach ($relations as $path) {
-            $source = $this;
+            $subject = $this;
 
             $processed = [];
 
@@ -350,34 +395,24 @@ class Model implements \IteratorAggregate
                 $current = implode('.', $processed);
 
                 if (isset($this->with[$current])) {
-                    $source = $this->with[$current]->getTarget();
+                    $subject = $this->with[$current]->getTarget();
                     continue;
                 }
 
-                if (! $source->hasRelation($name)) {
-                    throw new \RuntimeException(sprintf(
+                if (! $subject->hasRelation($name)) {
+                    throw new \InvalidArgumentException(sprintf(
                         "Can't join relation '%s' on table '%s' in model '%s'. Relation not found.",
                         $name,
-                        $source->getTableName(),
+                        $subject->getTableName(),
                         static::class
                     ));
                 }
 
-                $select = $this->getSelect();
-
-                $relation = $source->getRelation($name);
-
-                foreach ($relation->resolve($source) as list($targetTableAlias, $targetTableName, $condition)) {
-                    $select->join([$targetTableAlias => $targetTableName], $condition);
-                }
-
-                $target = $relation->getTarget();
-
-                $select->columns($target->getColumnsQualified($name));
+                $relation = $subject->getRelation($name);
 
                 $this->with[$current] = $relation;
 
-                $source = $target;
+                $subject = $relation->getTarget();
             }
         }
 
@@ -422,7 +457,7 @@ class Model implements \IteratorAggregate
 
         $conditionsTarget = $target->getTableName();
 
-        $select = $target->getSelect();
+        $select = $target->getSelectBase();
 
         if ($relation instanceof Many) {
             $viaTable = $relation->getVia();
@@ -435,9 +470,12 @@ class Model implements \IteratorAggregate
                 $viaRelation
                     ->setVia(null)
                     ->setName($viaTable)
+                    ->setSubject($target)
                     ->setTarget($intermediate);
 
-                foreach ($viaRelation->resolve($target) as list($targetTableAlias, $targetTableName, $condition)) {
+//                $target->with[$viaTable] = $viaRelation; // Lazy-loading alternative
+
+                foreach ($viaRelation->resolve() as list($targetTableAlias, $targetTableName, $condition)) {
                     $select->join([$targetTableAlias => $targetTableName], $condition);
                 }
 

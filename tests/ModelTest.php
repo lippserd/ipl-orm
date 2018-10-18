@@ -245,9 +245,12 @@ class ModelTest extends \PHPUnit_Framework_TestCase
             ->setTableName('shop')
             ->setColumns(['name', 'city']);
 
-        $product->hasMany('shop', $shop);
+        $product
+            ->hasMany('shop', $shop);
 
-        $product->with('shop');
+        $product
+            ->with('shop')
+            ->getSelect();
     }
 
     /**
@@ -268,7 +271,9 @@ class ModelTest extends \PHPUnit_Framework_TestCase
             ->setForeignKey('id')
             ->setCandidateKey(['name', 'vendor']);
 
-        $product->with('shop');
+        $product
+            ->with('shop')
+            ->getSelect();
     }
 
     public function testSelectNestedRelation()
@@ -361,7 +366,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @expectedException \RuntimeException
+     * @expectedException \InvalidArgumentException
      */
     public function testUnknownWithThrowsException()
     {
@@ -520,7 +525,9 @@ class ModelTest extends \PHPUnit_Framework_TestCase
             ->hasMany('shop', $shop)
             ->setVia('shop_product');
 
-        $product->select('product.name', 'shop.country');
+        $product
+            ->select('product.name', 'shop.country')
+            ->getSelect();
     }
 
     public function testWithVariadic()
@@ -677,7 +684,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    public function testAccessNestedRelationalDataThroughRelationName()
+    public function testAccessRelationalDataWithViaThroughRelationName()
     {
         $product = (new Orm\Model())
             ->setTableName('product')
