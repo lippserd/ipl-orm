@@ -99,13 +99,13 @@ class Many extends Relation
             $monkey
                 ->setVia(null)
                 ->setSubject($intermediate)
-                ->setCandidateKey($this->resolveForeignKey(
-                    $this->getTarget(),
-                    $this->getTargetForeignKey()
+                ->setCandidateKey($this->wantForeignKey(
+                    $this->getTargetForeignKey(),
+                    $this->getTarget()
                 ))
-                ->setForeignKey($this->resolveCandidateKey(
-                    $this->getTarget(),
-                    $this->getTargetCandidateKey()
+                ->setForeignKey($this->wantCandidateKey(
+                    $this->getTargetCandidateKey(),
+                    $this->getTarget()
                 ));
 
             $resolved = array_merge($resolved, $monkey->resolve());
