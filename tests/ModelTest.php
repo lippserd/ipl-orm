@@ -677,6 +677,34 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         );
     }
 
+    public function testAccessNestedRelationalDataThroughRelationName()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKey('id')
+            ->setColumns(['name'])
+            ->setProperties(['id' => 1])
+            ->setNew(false);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setKey('id')
+            ->setColumns(['name']);
+
+        $product
+            ->hasMany('shop', $shop)
+            ->setVia('shop_product');
+
+        $this->assertSql(
+            $product->shop()->getSelect(),
+            'SELECT shop.name'
+            . ' FROM shop shop'
+            . ' INNER JOIN shop_product shop_product ON shop_product.shop_id = shop.id'
+            . ' WHERE shop_product.product_id = ?',
+            [1]
+        );
+    }
+
     public function assertSql($query, $sql, $values = null)
     {
         list($stmt, $bind) = $this->queryBuilder->assemble($query);

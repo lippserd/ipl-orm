@@ -74,23 +74,25 @@ class Many extends Relation
     }
 
     /**
-     * @param   Model   $source
+     * @param   Model   $subject
      *
      * @return  array
      */
-    public function resolve(Model $source)
+    public function resolve(Model $subject)
     {
-        if ($this->via !== null) {
-            $intermediate = (new Model())
-                ->setTableName($this->via);
+        $viaTable = $this->getVia();
 
-            $relation = clone $this;
-            $relation
+        if ($viaTable !== null) {
+            $intermediate = (new Model())
+                ->setTableName($viaTable);
+
+            $viaRelation = clone $this;
+            $viaRelation
                 ->setVia(null)
-                ->setName($this->via)
+                ->setName($viaTable)
                 ->setTarget($intermediate);
 
-            $resolved = $relation->resolve($source);
+            $resolved = $viaRelation->resolve($subject);
 
             $monkey = clone $this;
             $monkey
@@ -108,7 +110,7 @@ class Many extends Relation
 
             return $resolved;
         } else {
-            return parent::resolve($source);
+            return parent::resolve($subject);
         }
     }
 }

@@ -415,12 +415,38 @@ class Model implements \IteratorAggregate
         }
 
         $relation = $this->relations[$name];
+
         $target = $relation->getTarget();
-        $tableAlias = $target->getTableName();
+
+        $conditions = $relation->resolveConditions($this);
+
+        $conditionsTarget = $target->getTableName();
+
         $select = $target->getSelect();
 
-        foreach ($relation->resolveConditions($this) as $fk => $ck) {
-            $select->where(["$tableAlias.$fk = ?" => $this->getProperty($ck)]);
+        if ($relation instanceof Many) {
+            $viaTable = $relation->getVia();
+
+            if ($viaTable !== null) {
+                $intermediate = (new self())
+                    ->setTableName($viaTable);
+
+                $viaRelation = clone $relation;
+                $viaRelation
+                    ->setVia(null)
+                    ->setName($viaTable)
+                    ->setTarget($intermediate);
+
+                foreach ($viaRelation->resolve($target) as list($targetTableAlias, $targetTableName, $condition)) {
+                    $select->join([$targetTableAlias => $targetTableName], $condition);
+                }
+
+                $conditionsTarget = $viaTable;
+            }
+        }
+
+        foreach ($conditions as $fk => $ck) {
+            $select->where(["$conditionsTarget.$fk = ?" => $this->getProperty($ck)]);
         }
 
         return $target;
