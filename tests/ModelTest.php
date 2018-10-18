@@ -307,6 +307,35 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         );
     }
 
+    public function testSelectNestedRelationViaColumns()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKey('id')
+            ->setColumns(['name', 'rrp']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setKey('id')
+            ->setColumns(['name', 'city']);
+
+        $country = (new Orm\Model())
+            ->setTableName('country')
+            ->setColumns(['name']);
+
+        $product->hasMany('shop', $shop);
+
+        $shop->hasMany('country', $country);
+
+        $this->assertSql(
+            $product->select('shop.country.name', 'product.name')->getSelect(),
+            'SELECT country.name, product.name'
+            . ' FROM product product'
+            . ' INNER JOIN shop shop ON shop.product_id = product.id'
+            . ' INNER JOIN country country ON country.shop_id = shop.id'
+        );
+    }
+
     public function testDuplicateWithIsNoop()
     {
         $product = (new Orm\Model())
@@ -721,6 +750,18 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $this->assertSql(
             $product->getSelect(),
             'SELECT LOWER(product.name) AS name FROM product product'
+        );
+    }
+
+    public function testAliasedCustomSelectColumns()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setColumns(['name' => 'LOWER(product.name)']);
+
+        $this->assertSql(
+            $product->select(['alias' => 'name'])->getSelect(),
+            'SELECT LOWER(product.name) AS alias FROM product product'
         );
     }
 

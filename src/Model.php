@@ -169,6 +169,24 @@ class Model implements \IteratorAggregate
         return in_array($column, $this->columns) || isset($this->columns[$column]);
     }
 
+    public function resolveColumn($column)
+    {
+        if (! $this->hasColumn($column)) {
+            throw new \RuntimeException(sprintf(
+                "Can't select column '%s' from table '%s' in model '%s'. Column not found.",
+                $column,
+                $this->getTableName(),
+                static::class
+            ));
+        }
+
+        if (! is_int($column) && isset($this->columns[$column])) {
+            return $this->columns[$column];
+        } else {
+            return $this->getTableName() . '.' . $column;
+        }
+    }
+
     /**
      * @return  string|array|null
      */
@@ -313,7 +331,7 @@ class Model implements \IteratorAggregate
 
             $selectColumns = [];
 
-            foreach ($this->selectColumns as $path) {
+            foreach ($this->selectColumns as $alias => $path) {
                 $dot = strrpos($path, '.');
 
                 if ($dot === false) {
@@ -334,16 +352,7 @@ class Model implements \IteratorAggregate
                     }
                 }
 
-                if (! $target->hasColumn($column)) {
-                    throw new \RuntimeException(sprintf(
-                        "Can't select column '%s' from table '%s' in model '%s'. Column not found.",
-                        $column,
-                        $target->getTableName(),
-                        static::class
-                    ));
-                }
-
-                $selectColumns[] = $path;
+                $selectColumns[$alias] = $target->resolveColumn($column);
             }
         } else {
             $autoColumns = true;
