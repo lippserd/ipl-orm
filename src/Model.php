@@ -4,7 +4,7 @@ namespace ipl\Orm;
 
 use ipl\Sql;
 
-class Model implements \IteratorAggregate
+class Model implements \ArrayAccess, \IteratorAggregate
 {
     use Properties;
 
