@@ -7,6 +7,11 @@ trait Properties
     /** @var array */
     protected $properties = [];
 
+    /**
+     * @param   string  $key
+     *
+     * @return  mixed
+     */
     public function getProperty($key)
     {
         $key = Str::camel($key);
@@ -24,6 +29,12 @@ trait Properties
         return null;
     }
 
+    /**
+     * @param   string  $key
+     * @param   mixed   $value
+     *
+     * @return  $this
+     */
     public function setProperty($key, $value)
     {
         $key = Str::camel($key);
@@ -41,6 +52,19 @@ trait Properties
         return $this;
     }
 
+    /**
+     * @return  array
+     */
+    public function getProperties()
+    {
+        return $this->properties;
+    }
+
+    /**
+     * @param   array   $properties
+     *
+     * @return  $this
+     */
     public function setProperties(array $properties = [])
     {
         foreach ($properties as $key => $value) {
