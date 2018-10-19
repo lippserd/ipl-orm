@@ -40,7 +40,7 @@ class Relation
     }
 
     /**
-     * @return Model
+     * @return Model|null
      */
     public function getSubject()
     {
@@ -162,14 +162,12 @@ class Relation
 
     public function resolveConditions(Model $subject)
     {
-        $name = $this->getName();
-
         $candidateKey = $this->wantCandidateKey($this->getCandidateKey(), $subject);
 
         if (empty($candidateKey)) {
             throw new \RuntimeException(sprintf(
                 "Can't join relation '%s' on table '%s' in model '%s'. No candidate key found.",
-                $name,
+                $this->getName(),
                 $subject->getTableName(),
                 static::class
             ));
@@ -181,7 +179,7 @@ class Relation
             throw new \RuntimeException(sprintf(
                 "Can't join relation '%s' on table '%s' in model '%s'."
                 . " Foreign key count (%s) does not match candidate key count (%s).",
-                $name,
+                $this->getName(),
                 $subject->getTableName(),
                 static::class,
                 implode(', ', $foreignKey),
@@ -189,9 +187,7 @@ class Relation
             ));
         }
 
-        foreach ($foreignKey as $k => $fk) {
-            yield $fk => $candidateKey[$k];
-        }
+        return array_combine($foreignKey, $candidateKey);
     }
 
     /**
