@@ -17,6 +17,9 @@ class Model implements \ArrayAccess, \IteratorAggregate
     /** @var string */
     protected $tableName;
 
+    /** @var string */
+    protected $tableAlias;
+
     /** @var array */
     protected $columns;
 
@@ -120,6 +123,26 @@ class Model implements \ArrayAccess, \IteratorAggregate
     }
 
     /**
+     * @return  string|null
+     */
+    public function getTableAlias()
+    {
+        return $this->tableAlias ?: $this->getTableName();
+    }
+
+    /**
+     * @param   string  $tableAlias
+     *
+     * @return  $this
+     */
+    public function setTableAlias($tableAlias)
+    {
+        $this->tableAlias = $tableAlias;
+
+        return $this;
+    }
+
+    /**
      * @return  array|null
      */
     public function getColumns()
@@ -183,7 +206,7 @@ class Model implements \ArrayAccess, \IteratorAggregate
         if (! is_int($column) && isset($this->columns[$column])) {
             return $this->columns[$column];
         } else {
-            return $this->getTableName() . '.' . $column;
+            return $this->getTableAlias() . '.' . $column;
         }
     }
 
@@ -306,9 +329,7 @@ class Model implements \ArrayAccess, \IteratorAggregate
     public function getSelectBase()
     {
         if ($this->select === null) {
-            $tableName = $this->getTableName();
-
-            $from = [$tableName => $tableName];
+            $from = [$this->getTableAlias() => $this->getTableName()];
 
             $this->select = (new Sql\Select())
                 ->from($from);
@@ -323,6 +344,7 @@ class Model implements \ArrayAccess, \IteratorAggregate
     public function getSelect()
     {
         $tableName = $this->getTableName();
+        $tableAlias = $this->getTableAlias();
 
         $select = clone $this->getSelectBase();
 
@@ -357,7 +379,7 @@ class Model implements \ArrayAccess, \IteratorAggregate
         } else {
             $autoColumns = true;
 
-            $selectColumns = $this->getColumnsQualified($tableName);
+            $selectColumns = $this->getColumnsQualified($tableAlias);
         }
 
         $select->columns($selectColumns);
@@ -483,7 +505,7 @@ class Model implements \ArrayAccess, \IteratorAggregate
 
         $conditions = $relation->resolveConditions($this);
 
-        $conditionsTarget = $target->getTableName();
+        $conditionsTarget = $target->getTableAlias();
 
         $select = $target->getSelectBase();
 

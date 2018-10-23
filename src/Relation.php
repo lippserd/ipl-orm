@@ -199,7 +199,7 @@ class Relation
 
         $conditions = $this->resolveConditions($subject);
 
-        $tableAlias = $subject->getTableName();
+        $tableAlias = $subject->getTableAlias();
 
         $targetTableAlias = $this->getName();
 
