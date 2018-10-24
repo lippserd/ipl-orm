@@ -838,4 +838,54 @@ class ModelTest extends \PHPUnit_Framework_TestCase
             $this->assertSame($values, $bind);
         }
     }
+
+    public function testOtherModelAsBase()
+    {
+        $summary = new Orm\Model();
+
+        $summary->setTableName('summary');
+
+        $summary->setColumns(['up' => 'SUM(CASE WHEN summary.state = 1 THEN 1 ELSE 0 END)']);
+
+        $host = new Orm\Model();
+        $host->setTableName('host');
+        $host->setColumns(['state']);
+
+        $summary->from($host, ['state']);
+
+        $this->assertSql(
+            $summary->select('up')->getSelect(),
+            'SELECT SUM(CASE WHEN summary.state = 1 THEN 1 ELSE 0 END) AS up'
+            . ' FROM (SELECT host.state FROM host host) summary'
+        );
+    }
+
+    public function testOtherModelsAsBase()
+    {
+        $host = (new Orm\Model())
+            ->setTableName('host')
+            ->setColumns(['host_state' => 'state']);
+
+        $service = (new Orm\Model())
+            ->setTableName('service')
+            ->setColumns(['service_state' => 'state']);
+
+        $summary = (new Orm\Model())
+            ->setTableName('summary')
+            ->setColumns([
+                'hosts_up' => 'SUM(CASE WHEN summary.host_state = 1 THEN 1 ELSE 0 END)',
+                'services_ok' => 'SUM(CASE WHEN summary.service_state = 1 THEN 1 ELSE 0 END)'
+            ]);
+
+        $summary->from($host, ['host_state', 'service_state' => new Sql\Expression('NULL')]);
+        $summary->from($service, ['host_state' => new Sql\Expression('NULL'), 'service_state']);
+
+        $this->assertSql(
+            $summary->select(['hosts_up', 'services_ok'])->getSelect(),
+            'SELECT SUM(CASE WHEN summary.host_state = 1 THEN 1 ELSE 0 END) AS hosts_up,'
+            . ' SUM(CASE WHEN summary.service_state = 1 THEN 1 ELSE 0 END) AS services_ok'
+            . ' FROM (SELECT state AS host_state, (NULL) AS service_state FROM host host'
+            . ' UNION ALL SELECT (NULL) AS host_state, state AS service_state FROM service service) summary'
+        );
+    }
 }

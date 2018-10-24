@@ -41,6 +41,9 @@ class Model implements \ArrayAccess, \IteratorAggregate
     /** @var Relation[] */
     protected $with = [];
 
+    /** @var array */
+    protected $from = [];
+
     /**
      * @param   Sql\Connection  $db
      *
@@ -189,25 +192,37 @@ class Model implements \ArrayAccess, \IteratorAggregate
      */
     public function hasColumn($column)
     {
-        return in_array($column, $this->columns) || isset($this->columns[$column]);
+        return in_array($column, $this->columns) || $this->hasAlias($column);
     }
 
+    /**
+     * @param   string  $column
+     *
+     * @return  string
+     */
     public function resolveColumn($column)
     {
-        if (! $this->hasColumn($column)) {
-            throw new \RuntimeException(sprintf(
-                "Can't select column '%s' from table '%s' in model '%s'. Column not found.",
-                $column,
-                $this->getTableName(),
-                static::class
-            ));
-        }
+        return $this->getTableAlias() . '.' . $column;
+    }
 
-        if (! is_int($column) && isset($this->columns[$column])) {
-            return $this->columns[$column];
-        } else {
-            return $this->getTableAlias() . '.' . $column;
-        }
+    /**
+     * @param   string  $alias
+     *
+     * @return  bool
+     */
+    public function hasAlias($alias)
+    {
+        return isset($this->columns[$alias]);
+    }
+
+    /**
+     * @param   string  $alias
+     *
+     * @return  string
+     */
+    public function resolveAlias($alias)
+    {
+        return $this->columns[$alias];
     }
 
     /**
@@ -329,10 +344,7 @@ class Model implements \ArrayAccess, \IteratorAggregate
     public function getSelectBase()
     {
         if ($this->select === null) {
-            $from = [$this->getTableAlias() => $this->getTableName()];
-
-            $this->select = (new Sql\Select())
-                ->from($from);
+            $this->select = (new Sql\Select());
         }
 
         return $this->select;
@@ -348,12 +360,31 @@ class Model implements \ArrayAccess, \IteratorAggregate
 
         $select = clone $this->getSelectBase();
 
+        if (! empty($this->from)) {
+            $from = new Sql\Select();
+
+            foreach ($this->from as list($model, $columns)) {
+                /** @var Model $model */
+                $from->unionAll($model->select($columns)->getSelect());
+            }
+
+            $select->from([$tableAlias => $from]);
+        } else {
+            $select->from([$tableAlias => $tableName]);
+        }
+
         if (! empty($this->selectColumns)) {
             $autoColumns = false;
 
             $selectColumns = [];
 
             foreach ($this->selectColumns as $alias => $path) {
+                if ($path === null || $path instanceof Sql\Expression) {
+                    $selectColumns[$alias] = $path;
+
+                    continue;
+                }
+
                 $dot = strrpos($path, '.');
 
                 if ($dot === false) {
@@ -374,7 +405,25 @@ class Model implements \ArrayAccess, \IteratorAggregate
                     }
                 }
 
-                $selectColumns[$alias] = $target->resolveColumn($column);
+                if (! $target->hasColumn($column)) {
+                    throw new \RuntimeException(sprintf(
+                        "Can't select column '%s' from table '%s' in model '%s'. Column not found.",
+                        $column,
+                        $target->getTableName(),
+                        static::class
+                    ));
+                }
+
+                if (! is_int($column) && $target->hasAlias($column)) {
+                    if (is_int($alias)) {
+                        $alias = $column;
+                    }
+                    $column = $target->resolveAlias($column);
+                } else {
+                    $column = $target->resolveColumn($column);
+                }
+
+                $selectColumns[$alias] = $column;
             }
         } else {
             $autoColumns = true;
@@ -426,6 +475,11 @@ class Model implements \ArrayAccess, \IteratorAggregate
         return $this;
     }
 
+    /**
+     * @param   string|array    $relations
+     *
+     * @return  $this
+     */
     public function with($relations)
     {
         $relations = is_string($relations) ? func_get_args() : $relations;
@@ -461,6 +515,19 @@ class Model implements \ArrayAccess, \IteratorAggregate
                 $subject = $relation->getTarget();
             }
         }
+
+        return $this;
+    }
+
+    /**
+     * @param   Model   $model
+     * @param   array   $columns
+     *
+     * @return  $this
+     */
+    public function from(Model $model, array $columns = null)
+    {
+        $this->from[] = [$model, $columns];
 
         return $this;
     }
