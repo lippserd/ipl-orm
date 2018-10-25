@@ -856,7 +856,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $this->assertSql(
             $summary->select('up')->getSelect(),
             'SELECT SUM(CASE WHEN summary.state = 1 THEN 1 ELSE 0 END) AS up'
-            . ' FROM (SELECT host.state FROM host host) summary'
+            . ' FROM ((SELECT host.state FROM host host)) summary'
         );
     }
 
@@ -884,8 +884,8 @@ class ModelTest extends \PHPUnit_Framework_TestCase
             $summary->select(['hosts_up', 'services_ok'])->getSelect(),
             'SELECT SUM(CASE WHEN summary.host_state = 1 THEN 1 ELSE 0 END) AS hosts_up,'
             . ' SUM(CASE WHEN summary.service_state = 1 THEN 1 ELSE 0 END) AS services_ok'
-            . ' FROM (SELECT state AS host_state, (NULL) AS service_state FROM host host'
-            . ' UNION ALL SELECT (NULL) AS host_state, state AS service_state FROM service service) summary'
+            . ' FROM ((SELECT state AS host_state, (NULL) AS service_state FROM host host)'
+            . ' UNION ALL (SELECT (NULL) AS host_state, state AS service_state FROM service service)) summary'
         );
     }
 }
