@@ -2,11 +2,15 @@
 
 namespace ipl\Orm;
 
+use Icinga\Data\Filter;
+use ipl\Orm\Filter\FiltersInterface;
+use ipl\Orm\Filter\Filters;
 use ipl\Sql;
 
-class Model implements \ArrayAccess, \IteratorAggregate
+class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
 {
     use Properties;
+    use Filters;
 
     /** @var bool */
     protected $new = true;
@@ -385,43 +389,7 @@ class Model implements \ArrayAccess, \IteratorAggregate
                     continue;
                 }
 
-                $dot = strrpos($path, '.');
-
-                if ($dot === false) {
-                    $target = $this;
-
-                    $column = $path;
-                } else {
-                    $relation = substr($path, 0, $dot);
-
-                    $column = substr($path, $dot + 1);
-
-                    if ($relation === $tableName) {
-                        $target = $this;
-                    } else {
-                        $this->with($relation);
-
-                        $target = $this->with[$relation]->getTarget();
-                    }
-                }
-
-                if (! $target->hasColumn($column)) {
-                    throw new \RuntimeException(sprintf(
-                        "Can't select column '%s' from table '%s' in model '%s'. Column not found.",
-                        $column,
-                        $target->getTableName(),
-                        static::class
-                    ));
-                }
-
-                if (! is_int($column) && $target->hasAlias($column)) {
-                    if (is_int($alias)) {
-                        $alias = $column;
-                    }
-                    $column = $target->resolveAlias($column);
-                } else {
-                    $column = $target->resolveColumn($column);
-                }
+                list($column, $alias) = $this->requireAndResolveColumn($path, $alias);
 
                 $selectColumns[$alias] = $column;
             }
@@ -432,6 +400,18 @@ class Model implements \ArrayAccess, \IteratorAggregate
         }
 
         $select->columns($selectColumns);
+
+        $filter = $this->getFilter();
+
+        if (! $filter->isEmpty()) {
+            $this->requireFilterColumns($filter);
+
+            $where = $this->assembleFilter($filter);
+
+            $operator = array_shift($where);
+
+            $select->where($where, $operator);
+        }
 
         $select->orderBy($this->sortRules);
 
@@ -609,10 +589,173 @@ class Model implements \ArrayAccess, \IteratorAggregate
         return $target;
     }
 
+    /**
+     * @param   string      $column
+     * @param   int|string  $alias
+     *
+     * @return  array
+     */
+    protected function requireAndResolveColumn($column, $alias = null)
+    {
+        $tableAlias = $this->getTableAlias();
+
+        $dot = strrpos($column, '.');
+
+        if ($dot === false) {
+            $target = $this;
+        } else {
+            $path = $column;
+
+            $relation = substr($path, 0, $dot);
+
+            $column = substr($path, $dot + 1);
+
+            if ($relation === $tableAlias) {
+                $target = $this;
+            } else {
+                $this->with($relation);
+
+                $target = $this->with[$relation]->getTarget();
+            }
+        }
+
+        if (! $target->hasColumn($column)) {
+            throw new \RuntimeException(sprintf(
+                "Can't require column '%s' from table '%s' in model '%s'. Column not found.",
+                $column,
+                $target->getTableName(),
+                static::class
+            ));
+        }
+
+        if ($target->hasAlias($column)) {
+            if (is_int($alias)) {
+                $alias = $column;
+            }
+
+            $column = $target->resolveAlias($column);
+        } else {
+            $column = $target->resolveColumn($column);
+        }
+
+        return [$column, $alias];
+    }
+
+    protected function requireFilterColumns(Filter\Filter $filter)
+    {
+        if ($filter instanceof Filter\FilterExpression) {
+            if ($filter->getExpression() === '*') {
+                // Wildcard only filters are ignored so stop early here to avoid joining a table for nothing
+                return;
+            }
+
+            $this->requireAndResolveColumn($filter->getColumn());
+        } else {
+            /** @var Filter\FilterChain $filter */
+            foreach ($filter->filters() as $child) {
+                $this->requireFilterColumns($child);
+            }
+        }
+    }
+
     private function assertRelationDoesNotYetExist($name)
     {
         if (isset($this->relations[$name])) {
             throw new \InvalidArgumentException("Relation '$name' already exists");
+        }
+    }
+
+    /**
+     * @param   Filter\Filter   $filter
+     * @param   int             $level
+     *
+     * @return  array
+     */
+    public function assembleFilter(Filter\Filter $filter, $level = 0)
+    {
+        $condition = null;
+
+        if ($filter->isChain()) {
+            if ($filter instanceof Filter\FilterAnd) {
+                $operator = Sql\Sql::ALL;
+            } elseif ($filter instanceof Filter\FilterOr) {
+                $operator = Sql\Sql::ANY;
+            } elseif ($filter instanceof Filter\FilterNot) {
+                $operator = 'NOT'; // TODO(el): Sql::NOT does not exist yet
+            } else {
+                throw new \InvalidArgumentException(sprintf('Cannot render filter: %s', get_class($filter)));
+            }
+
+            if (! $filter->isEmpty()) {
+                foreach ($filter->filters() as $filterPart) {
+                    $part = $this->assembleFilter($filterPart, $level + 1);
+                    if ($part) {
+                        if ($condition === null) {
+                            $condition = [$operator, $part];
+                        } else {
+                            if ($condition[0] === $operator) {
+                                $condition[] = $part;
+                            } else {
+                                $condition = [$operator, $condition, $part];
+                            }
+                        }
+                    }
+                }
+            } else {
+                // TODO(el): Explicitly return the empty string due to the FilterNot case?
+            }
+        } else {
+            /** @var Filter\FilterExpression $filter */
+            $condition = array_merge(
+                [Sql\Sql::ALL],
+                $this->assemblePredicate($filter->getColumn(), $filter->getSign(), $filter->getExpression())
+            );
+        }
+
+        return $condition;
+    }
+
+    /**
+     * @param   string  $column
+     * @param   string  $operator
+     * @param   mixed   $expression
+     *
+     * @return  array
+     */
+    public function assemblePredicate($column, $operator, $expression)
+    {
+        if (is_array($expression)) {
+            if ($operator === '=') {
+                return ["$column IN (?)" => $expression];
+            } elseif ($operator === '!=') {
+                return ["($column NOT IN (?) OR $column IS NULL)" => $expression];
+            }
+
+            throw new \InvalidArgumentException(
+                'Unable to render array expressions with operators other than equal or not equal'
+            );
+        } elseif ($operator === '=' && strpos($expression, '*') !== false) {
+            if ($expression === '*') {
+                // We'll ignore such filters as it prevents index usage and because "*" means anything. So whether we're
+                // using a real column with a valid comparison here or just an expression which can only be evaluated to
+                // true makes no difference, except for performance reasons
+                return [new Sql\Expression('TRUE')];
+            }
+
+            return ["$column LIKE ?" => str_replace('*', '%', $expression)];
+        } elseif ($operator === '!=' && strpos($expression, '*') !== false) {
+            if ($expression === '*') {
+                // We'll ignore such filters as it prevents index usage and because "*" means nothing. So whether we're
+                // using a real column with a valid comparison here or just an expression which cannot be evaluated to
+                // true makes no difference, except for performance reasons
+                return [new Sql\Expression('FALSE')];
+            }
+
+            return ["($column NOT LIKE ? OR $column IS NULL)" => str_replace('*', '%', $expression)];
+        } elseif ($operator === '!=') {
+            return ["($column != ? OR $column IS NULL)" => $expression];
+        } else {
+            return ["$column $operator ?" => $expression];
         }
     }
 }
