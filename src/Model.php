@@ -798,4 +798,9 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
             return ["$column $operator ?" => $expression];
         }
     }
+
+    public function dump()
+    {
+        echo '<pre>' . $this->getDb()->getQueryBuilder()->assembleSelect($this->getSelect())[0] . '</pre>';die;
+    }
 }
