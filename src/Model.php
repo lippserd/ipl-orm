@@ -451,9 +451,11 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
 
             $where = $this->assembleFilter($filter);
 
-            $operator = array_shift($where);
+            if ($where) {
+                $operator = array_shift($where);
 
-            $select->where($where, $operator);
+                $select->where($where, $operator);
+            }
         }
 
         $select->orderBy($this->sortRules);
