@@ -44,6 +44,13 @@ class Model implements \ArrayAccess, \IteratorAggregate
     /** @var array */
     protected $from = [];
 
+    public function __construct(array $properties = [])
+    {
+        $this->setProperties($properties);
+
+        $this->init();
+    }
+
     /**
      * @param   Sql\Connection  $db
      *
@@ -53,8 +60,6 @@ class Model implements \ArrayAccess, \IteratorAggregate
     {
         $model = (new static())
             ->setDb($db);
-
-        $model->init();
 
         return $model;
     }
@@ -538,11 +543,8 @@ class Model implements \ArrayAccess, \IteratorAggregate
     public function query()
     {
         foreach ($this->getDb()->select($this->getSelect()) as $row) {
-            $model = clone $this;
-
-            $model
-                ->setProperties($row)
-                ->setNew(false);
+            $model = (new static($row))
+                ->setDb($this->getDb());
 
             yield $model;
         }
