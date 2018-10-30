@@ -8,14 +8,11 @@ use ipl\Sql;
 class ModelTest extends \PHPUnit_Framework_TestCase
 {
     use Fixtures;
-
-    /** @var Sql\QueryBuilder */
-    protected $queryBuilder;
+    use TestsSql;
 
     public function setUp()
     {
-        $this->queryBuilder = new Sql\QueryBuilder(new TestAdapter());
-
+        $this->initTestsSql();
         $this->initFixturesDb();
     }
 
@@ -826,17 +823,6 @@ class ModelTest extends \PHPUnit_Framework_TestCase
             $product->select(['alias' => 'name'])->getSelect(),
             'SELECT LOWER(product.name) AS alias FROM product product'
         );
-    }
-
-    public function assertSql($query, $sql, $values = null)
-    {
-        list($stmt, $bind) = $this->queryBuilder->assemble($query);
-
-        $this->assertSame($sql, $stmt);
-
-        if ($values !== null) {
-            $this->assertSame($values, $bind);
-        }
     }
 
     public function testOtherModelAsBase()
