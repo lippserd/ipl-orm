@@ -8,14 +8,11 @@ use ipl\Sql;
 class ModelTest extends \PHPUnit_Framework_TestCase
 {
     use Fixtures;
-
-    /** @var Sql\QueryBuilder */
-    protected $queryBuilder;
+    use TestsSql;
 
     public function setUp()
     {
-        $this->queryBuilder = new Sql\QueryBuilder(new TestAdapter());
-
+        $this->initTestsSql();
         $this->initFixturesDb();
     }
 
@@ -53,7 +50,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
     {
         $product = new Orm\Model();
 
-        $this->assertNull($product->getColumns());
+        $this->assertEmpty($product->getColumns());
     }
 
     public function testColumns()
@@ -119,7 +116,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
     {
         $product = new Orm\Model();
 
-        $this->assertNull($product->getRelations());
+        $this->assertEmpty($product->getRelations());
     }
 
     public function testHasRelation()
@@ -828,17 +825,6 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    public function assertSql($query, $sql, $values = null)
-    {
-        list($stmt, $bind) = $this->queryBuilder->assemble($query);
-
-        $this->assertSame($sql, $stmt);
-
-        if ($values !== null) {
-            $this->assertSame($values, $bind);
-        }
-    }
-
     public function testOtherModelAsBase()
     {
         $summary = new Orm\Model();
@@ -886,6 +872,32 @@ class ModelTest extends \PHPUnit_Framework_TestCase
             . ' SUM(CASE WHEN summary.service_state = 1 THEN 1 ELSE 0 END) AS services_ok'
             . ' FROM ((SELECT state AS host_state, (NULL) AS service_state FROM host host)'
             . ' UNION ALL (SELECT (NULL) AS host_state, state AS service_state FROM service service)) summary'
+        );
+    }
+
+    public function testRelationWithPrefix()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKey('id')
+            ->setColumns(['name']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setKey('id')
+            ->setColumns(['name']);
+
+        $product
+            ->hasMany('shop', $shop)
+            ->setVia('shop_product')
+            ->setPrefix('shop_');
+
+        $this->assertSql(
+            $product->select('shop_name')->getSelect(),
+            'SELECT shop.name AS shop_name'
+            . ' FROM product product'
+            . ' INNER JOIN shop_product shop_product ON shop_product.product_id = product.id'
+            . ' INNER JOIN shop shop ON shop.id = shop_product.shop_id'
         );
     }
 }

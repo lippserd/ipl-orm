@@ -19,6 +19,9 @@ class Relation
     /** @var string|array */
     protected $candidateKey;
 
+    /** @var string */
+    protected $prefix;
+
     /**
      * @return  string|null
      */
@@ -115,6 +118,26 @@ class Relation
     public function setCandidateKey($candidateKey)
     {
         $this->candidateKey = $candidateKey;
+
+        return $this;
+    }
+
+    /**
+     * @return  string
+     */
+    public function getPrefix()
+    {
+        return $this->prefix;
+    }
+
+    /**
+     * @param   string  $prefix
+     *
+     * @return  $this
+     */
+    public function setPrefix($prefix)
+    {
+        $this->prefix = $prefix;
 
         return $this;
     }
