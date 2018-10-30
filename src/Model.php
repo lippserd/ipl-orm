@@ -21,7 +21,7 @@ class Model implements \ArrayAccess, \IteratorAggregate
     protected $tableAlias;
 
     /** @var array */
-    protected $columns;
+    protected $columns = [];
 
     /** @var string|array */
     protected $key;
@@ -30,7 +30,7 @@ class Model implements \ArrayAccess, \IteratorAggregate
     protected $sortRules = [];
 
     /** @var Relation[] */
-    protected $relations;
+    protected $relations = [];
 
     /** @var Sql\Select */
     protected $select;
@@ -151,7 +151,7 @@ class Model implements \ArrayAccess, \IteratorAggregate
     }
 
     /**
-     * @return  array|null
+     * @return  array
      */
     public function getColumns()
     {

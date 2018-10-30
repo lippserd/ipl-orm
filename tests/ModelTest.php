@@ -50,7 +50,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
     {
         $product = new Orm\Model();
 
-        $this->assertNull($product->getColumns());
+        $this->assertEmpty($product->getColumns());
     }
 
     public function testColumns()
@@ -116,7 +116,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
     {
         $product = new Orm\Model();
 
-        $this->assertNull($product->getRelations());
+        $this->assertEmpty($product->getRelations());
     }
 
     public function testHasRelation()
