@@ -378,6 +378,30 @@ class Model implements \ArrayAccess, \IteratorAggregate
             $select->from([$tableAlias => $tableName]);
         }
 
+        $columnMap = [];
+
+        foreach ($this->getRelations() as $name => $relation) {
+            $prefix = $relation->getPrefix();
+
+            if ($prefix === null) {
+                continue;
+            }
+
+            $columns = $relation->getTarget()->getColumns();
+
+            foreach ($columns as $alias => $column) {
+                if (is_int($alias)) {
+                    $alias = $column;
+                }
+
+                $column = $relation->getTarget()->resolveColumn($column);
+
+                $alias = "{$prefix}{$alias}";
+
+                $columnMap[$alias] = [$name, $column];
+            }
+        }
+
         if (! empty($this->selectColumns)) {
             $autoColumns = false;
 
@@ -386,6 +410,20 @@ class Model implements \ArrayAccess, \IteratorAggregate
             foreach ($this->selectColumns as $alias => $path) {
                 if ($path === null || $path instanceof Sql\Expression) {
                     $selectColumns[$alias] = $path;
+
+                    continue;
+                }
+
+                if (isset($columnMap[$path])) {
+                    if (is_int($alias)) {
+                        $alias = $path;
+                    }
+
+                    list($relation, $column) = $columnMap[$path];
+
+                    $this->with($relation);
+
+                    $selectColumns[$alias] = $column;
 
                     continue;
                 }

@@ -874,4 +874,30 @@ class ModelTest extends \PHPUnit_Framework_TestCase
             . ' UNION ALL (SELECT (NULL) AS host_state, state AS service_state FROM service service)) summary'
         );
     }
+
+    public function testRelationWithPrefix()
+    {
+        $product = (new Orm\Model())
+            ->setTableName('product')
+            ->setKey('id')
+            ->setColumns(['name']);
+
+        $shop = (new Orm\Model())
+            ->setTableName('shop')
+            ->setKey('id')
+            ->setColumns(['name']);
+
+        $product
+            ->hasMany('shop', $shop)
+            ->setVia('shop_product')
+            ->setPrefix('shop_');
+
+        $this->assertSql(
+            $product->select('shop_name')->getSelect(),
+            'SELECT shop.name AS shop_name'
+            . ' FROM product product'
+            . ' INNER JOIN shop_product shop_product ON shop_product.product_id = product.id'
+            . ' INNER JOIN shop shop ON shop.id = shop_product.shop_id'
+        );
+    }
 }
