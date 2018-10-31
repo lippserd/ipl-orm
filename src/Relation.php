@@ -20,7 +20,7 @@ class Relation
     protected $candidateKey;
 
     /** @var string */
-    protected $prefix;
+    protected $columnPrefix;
 
     /**
      * @return  string|null
@@ -125,19 +125,19 @@ class Relation
     /**
      * @return  string
      */
-    public function getPrefix()
+    public function getColumnPrefix()
     {
-        return $this->prefix;
+        return $this->columnPrefix ?: $this->getName();
     }
 
     /**
-     * @param   string  $prefix
+     * @param   string  $columnPrefix
      *
      * @return  $this
      */
-    public function setPrefix($prefix)
+    public function setColumnPrefix($columnPrefix)
     {
-        $this->prefix = $prefix;
+        $this->columnPrefix = $columnPrefix;
 
         return $this;
     }
@@ -222,14 +222,14 @@ class Relation
 
         $conditions = $this->resolveConditions($subject);
 
-        $tableAlias = $subject->getTableAlias();
+        $tableName = $subject->getTableName();
 
         $targetTableAlias = $this->getName();
 
         $condition = [];
 
         foreach ($conditions as $fk => $ck) {
-            $condition[] = sprintf('%s.%s = %s.%s', $targetTableAlias, $fk, $tableAlias, $ck);
+            $condition[] = sprintf('%s.%s = %s.%s', $targetTableAlias, $fk, $tableName, $ck);
         }
 
         return [

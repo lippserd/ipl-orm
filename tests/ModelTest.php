@@ -31,21 +31,6 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         $this->assertSame('product', $product->getTableName());
     }
 
-    public function testNoTableAlias()
-    {
-        $product = new Orm\Model();
-
-        $this->assertNull($product->getTableAlias());
-    }
-
-    public function testTableAlias()
-    {
-        $product = (new Orm\Model())
-            ->setTableAlias('p');
-
-        $this->assertSame('p', $product->getTableAlias());
-    }
-
     public function testNoColumns()
     {
         $product = new Orm\Model();
@@ -65,25 +50,14 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
     public function testColumnsQualified()
     {
-        $columns = ['name', 'rrp'];
-
         $product = (new Orm\Model())
             ->setTableName('product')
-            ->setColumns($columns);
+            ->setColumns(['name', 'rrp']);
 
-        $this->assertSame(['product.name', 'product.rrp'], $product->getColumnsQualified($product->getTableName()));
-    }
-
-    public function testColumnsQualifiedWithAlias()
-    {
-        $columns = ['name', 'rrp'];
-
-        $product = (new Orm\Model())
-            ->setTableName('product')
-            ->setTableAlias('p')
-            ->setColumns($columns);
-
-        $this->assertSame(['p.name', 'p.rrp'], $product->getColumnsQualified($product->getTableAlias()));
+        $this->assertSame(
+            ['product_name' => 'product.name', 'product_rrp' => 'product.rrp'],
+            $product->getColumnsQualified($product->getTableName())
+        );
     }
 
     public function testNoKey()
@@ -180,32 +154,10 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->with('shop')->getSelect(),
-            'SELECT product.name, product.rrp, shop.name, shop.city'
+            'SELECT product.name AS product_name, product.rrp AS product_rrp'
+            . ', shop.name AS shop_name, shop.city AS shop_city'
             . ' FROM product product'
             . ' INNER JOIN shop shop ON shop.product_id = product.id'
-        );
-    }
-
-    public function testSelectManyRelationWithAlias()
-    {
-        $product = (new Orm\Model())
-            ->setTableName('product')
-            ->setTableAlias('p')
-            ->setKey('id')
-            ->setColumns(['name', 'rrp']);
-
-        $shop = (new Orm\Model())
-            ->setTableName('shop')
-            ->setTableAlias('s')
-            ->setColumns(['name', 'city']);
-
-        $product->hasMany('shop', $shop);
-
-        $this->assertSql(
-            $product->with('shop')->getSelect(),
-            'SELECT p.name, p.rrp, shop.name, shop.city'
-            . ' FROM product p'
-            . ' INNER JOIN shop shop ON shop.product_id = p.id'
         );
     }
 
@@ -227,7 +179,8 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->with('shop')->getSelect(),
-            'SELECT product.name, product.rrp, shop.name, shop.city'
+            'SELECT product.name AS product_name, product.rrp AS product_rrp'
+            . ', shop.name AS shop_name, shop.city AS shop_city'
             . ' FROM product product'
             . ' INNER JOIN shop shop ON shop.product_hash = product.hash'
         );
@@ -249,7 +202,8 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->with('shop')->getSelect(),
-            'SELECT product.name, product.rrp, shop.name, shop.city'
+            'SELECT product.name AS product_name, product.rrp AS product_rrp'
+            . ', shop.name AS shop_name, shop.city AS shop_city'
             . ' FROM product product'
             . ' INNER JOIN shop shop ON (shop.product_name = product.name) AND (shop.product_vendor = product.vendor)'
         );
@@ -273,7 +227,8 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->with('shop')->getSelect(),
-            'SELECT product.name, product.rrp, shop.name, shop.city'
+            'SELECT product.name AS product_name, product.rrp AS product_rrp'
+            . ', shop.name AS shop_name, shop.city AS shop_city'
             . ' FROM product product'
             . ' INNER JOIN shop shop ON (shop.product_name = product.name) AND (shop.product_vendor = product.vendor)'
         );
@@ -347,7 +302,9 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->getSelect(),
-            'SELECT product.name, product.rrp, shop.name, shop.city, country.name'
+            'SELECT product.name AS product_name, product.rrp AS product_rrp'
+            . ', shop.name AS shop_name, shop.city AS shop_city'
+            . ', country.name AS country_name'
             . ' FROM product product'
             . ' INNER JOIN shop shop ON shop.product_id = product.id'
             . ' INNER JOIN country country ON country.shop_id = shop.id'
@@ -376,7 +333,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->select('shop.country.name', 'product.name')->getSelect(),
-            'SELECT country.name, product.name'
+            'SELECT country.name AS country_name, product.name AS product_name'
             . ' FROM product product'
             . ' INNER JOIN shop shop ON shop.product_id = product.id'
             . ' INNER JOIN country country ON country.shop_id = shop.id'
@@ -410,7 +367,9 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->getSelect(),
-            'SELECT product.name, product.rrp, shop.name, shop.city, country.name'
+            'SELECT product.name AS product_name, product.rrp AS product_rrp'
+            . ', shop.name AS shop_name, shop.city AS shop_city'
+            . ', country.name AS country_name'
             . ' FROM product product'
             . ' INNER JOIN shop shop ON shop.product_id = product.id'
             . ' INNER JOIN country country ON country.shop_id = shop.id'
@@ -437,20 +396,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->getSelect(),
-            'SELECT product.name, product.rrp FROM product product'
-        );
-    }
-
-    public function testSelectWithAlias()
-    {
-        $product = (new Orm\Model())
-            ->setTableName('product')
-            ->setTableAlias('p')
-            ->setColumns(['name', 'rrp']);
-
-        $this->assertSql(
-            $product->getSelect(),
-            'SELECT p.name, p.rrp FROM product p'
+            'SELECT product.name AS product_name, product.rrp AS product_rrp FROM product product'
         );
     }
 
@@ -482,7 +428,8 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->with('shop')->getSelect(),
-            'SELECT product.name, product.rrp, shop.name, shop.city'
+            'SELECT product.name AS product_name, product.rrp AS product_rrp'
+            . ', shop.name AS shop_name, shop.city AS shop_city'
             . ' FROM product product'
             . ' INNER JOIN shop_product shop_product ON shop_product.product_id = product.id'
             . ' INNER JOIN shop shop ON shop.id = shop_product.shop_id'
@@ -512,7 +459,8 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->with('shop')->getSelect(),
-            'SELECT product.name, product.rrp, shop.name, shop.city'
+            'SELECT product.name AS product_name, product.rrp AS product_rrp'
+            . ', shop.name AS shop_name, shop.city AS shop_city'
             . ' FROM product product'
             . ' INNER JOIN shop_product shop_product ON shop_product.product_hash = product.hash'
             . ' INNER JOIN shop shop ON shop.hash = shop_product.shop_hash'
@@ -540,7 +488,8 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->with('shop')->getSelect(),
-            'SELECT product.name, product.rrp, shop.name, shop.city'
+            'SELECT product.name AS product_name, product.rrp AS product_rrp'
+            . ', shop.name AS shop_name, shop.city AS shop_city'
             . ' FROM product product'
             . ' INNER JOIN shop_product shop_product ON shop_product.product_hash = product.id'
             . ' INNER JOIN shop shop ON shop.hash = shop_product.shop_id'
@@ -563,7 +512,9 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->with('retail')->with('digital')->getSelect(),
-            'SELECT product.name, product.rrp, retail.name, retail.city, digital.name, digital.city'
+            'SELECT product.name AS product_name, product.rrp AS product_rrp'
+            . ', retail.name AS retail_name, retail.city AS retail_city'
+            . ', digital.name AS digital_name, digital.city AS digital_city'
             . ' FROM product product'
             . ' INNER JOIN shop retail ON retail.product_id = product.id'
             . ' INNER JOIN shop digital ON digital.product_id = product.id'
@@ -588,7 +539,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->select('product.name', 'shop.name')->getSelect(),
-            'SELECT product.name, shop.name'
+            'SELECT product.name AS product_name, shop.name AS shop_name'
             . ' FROM product product'
             . ' INNER JOIN shop_product shop_product ON shop_product.product_id = product.id'
             . ' INNER JOIN shop shop ON shop.id = shop_product.shop_id'
@@ -635,7 +586,9 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->with('retail', 'digital')->getSelect(),
-            'SELECT product.name, product.rrp, retail.name, retail.city, digital.name, digital.city'
+            'SELECT product.name AS product_name, product.rrp AS product_rrp'
+            . ', retail.name AS retail_name, retail.city AS retail_city'
+            . ', digital.name AS digital_name, digital.city AS digital_city'
             . ' FROM product product'
             . ' INNER JOIN shop retail ON retail.product_id = product.id'
             . ' INNER JOIN shop digital ON digital.product_id = product.id'
@@ -658,7 +611,9 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->with(['retail', 'digital'])->getSelect(),
-            'SELECT product.name, product.rrp, retail.name, retail.city, digital.name, digital.city'
+            'SELECT product.name AS product_name, product.rrp AS product_rrp'
+            . ', retail.name AS retail_name, retail.city AS retail_city'
+            . ', digital.name AS digital_name, digital.city AS digital_city'
             . ' FROM product product'
             . ' INNER JOIN shop retail ON retail.product_id = product.id'
             . ' INNER JOIN shop digital ON digital.product_id = product.id'
@@ -725,7 +680,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->select('product.name')->getSelect(),
-            'SELECT product.name'
+            'SELECT product.name AS product_name'
             . ' FROM product product'
             . ' ORDER BY product.name'
         );
@@ -766,7 +721,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->shop()->getSelect(),
-            'SELECT shop.name'
+            'SELECT shop.name AS shop_name'
             . ' FROM shop shop'
             . ' WHERE shop.product_id = ?',
             [1]
@@ -793,7 +748,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->shop()->getSelect(),
-            'SELECT shop.name'
+            'SELECT shop.name AS shop_name'
             . ' FROM shop shop'
             . ' INNER JOIN shop_product shop_product ON shop_product.shop_id = shop.id'
             . ' WHERE shop_product.product_id = ?',
@@ -809,7 +764,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $product->getSelect(),
-            'SELECT LOWER(product.name) AS name FROM product product'
+            'SELECT LOWER(product.name) AS product_name FROM product product'
         );
     }
 
@@ -831,7 +786,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $summary->setTableName('summary');
 
-        $summary->setColumns(['up' => 'SUM(CASE WHEN summary.state = 1 THEN 1 ELSE 0 END)']);
+        $summary->setColumns(['up' => 'SUM(CASE WHEN summary.host_state = 1 THEN 1 ELSE 0 END)']);
 
         $host = new Orm\Model();
         $host->setTableName('host');
@@ -841,8 +796,8 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSql(
             $summary->select('up')->getSelect(),
-            'SELECT SUM(CASE WHEN summary.state = 1 THEN 1 ELSE 0 END) AS up'
-            . ' FROM ((SELECT host.state FROM host host)) summary'
+            'SELECT SUM(CASE WHEN summary.host_state = 1 THEN 1 ELSE 0 END) AS up'
+            . ' FROM ((SELECT host.state AS host_state FROM host host)) summary'
         );
     }
 
@@ -875,7 +830,7 @@ class ModelTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    public function testRelationWithPrefix()
+    public function testFoobar()
     {
         $product = (new Orm\Model())
             ->setTableName('product')
@@ -884,20 +839,18 @@ class ModelTest extends \PHPUnit_Framework_TestCase
 
         $shop = (new Orm\Model())
             ->setTableName('shop')
-            ->setKey('id')
-            ->setColumns(['name']);
+            ->setColumns(['city']);
 
         $product
             ->hasMany('shop', $shop)
-            ->setVia('shop_product')
-            ->setPrefix('shop_');
+            ->setColumnPrefix('product');
 
         $this->assertSql(
-            $product->select('shop_name')->getSelect(),
-            'SELECT shop.name AS shop_name'
+            $product->with('shop')->getSelect(),
+            'SELECT product.name AS product_name'
+            . ', shop.city AS product_city'
             . ' FROM product product'
-            . ' INNER JOIN shop_product shop_product ON shop_product.product_id = product.id'
-            . ' INNER JOIN shop shop ON shop.id = shop_product.shop_id'
+            . ' INNER JOIN shop shop ON shop.product_id = product.id'
         );
     }
 }

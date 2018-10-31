@@ -21,9 +21,6 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
     /** @var string */
     protected $tableName;
 
-    /** @var string */
-    protected $tableAlias;
-
     /** @var array */
     protected $columns = [];
 
@@ -135,26 +132,6 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
     }
 
     /**
-     * @return  string|null
-     */
-    public function getTableAlias()
-    {
-        return $this->tableAlias ?: $this->getTableName();
-    }
-
-    /**
-     * @param   string  $tableAlias
-     *
-     * @return  $this
-     */
-    public function setTableAlias($tableAlias)
-    {
-        $this->tableAlias = $tableAlias;
-
-        return $this;
-    }
-
-    /**
      * @return  array
      */
     public function getColumns()
@@ -175,17 +152,23 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
     }
 
     /**
-     * @param   string  $prefix
+     * @param   string  $tableName
+     * @param   string  $columnPrefix
      *
      * @return  array
      */
-    public function getColumnsQualified($prefix)
+    public function getColumnsQualified($tableName, $columnPrefix = null)
     {
+        $columnPrefix = $columnPrefix ?: $tableName;
+
         $qualified = [];
 
-        foreach ((array) $this->getColumns() as $alias => $column) {
+        foreach ($this->getColumns() as $alias => $column) {
             if (is_int($alias)) {
-                $column = $prefix . '.' . $column;
+                $alias = $columnPrefix . '_' . $column;
+                $column = $tableName . '.' . $column;
+            } else {
+                $alias = $columnPrefix . '_' . $alias;
             }
 
             $qualified[$alias] = $column;
@@ -209,9 +192,9 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
      *
      * @return  string
      */
-    public function resolveColumn($column)
+    public function qualifyColumn($column)
     {
-        return $this->getTableAlias() . '.' . $column;
+        return $this->getTableName() . '.' . $column;
     }
 
     /**
@@ -227,11 +210,21 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
     /**
      * @param   string  $alias
      *
+     * @return  string|null
+     */
+    public function getAlias($alias)
+    {
+        return $this->hasAlias($alias) ? $this->columns[$alias] : null;
+    }
+
+    /**
+     * @param   string  $alias
+     *
      * @return  string
      */
-    public function resolveAlias($alias)
+    public function qualifyAlias($alias)
     {
-        return $this->columns[$alias];
+        return $this->getTableName() . '_' . $alias;
     }
 
     /**
@@ -365,7 +358,6 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
     public function getSelect()
     {
         $tableName = $this->getTableName();
-        $tableAlias = $this->getTableAlias();
 
         $select = clone $this->getSelectBase();
 
@@ -377,32 +369,21 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
                 $from->unionAll($model->select($columns)->getSelect());
             }
 
-            $select->from([$tableAlias => $from]);
+            $select->from([$tableName => $from]);
         } else {
-            $select->from([$tableAlias => $tableName]);
+            $select->from([$tableName => $tableName]);
         }
 
+        $myColumns = $this->getColumnsQualified($tableName);
         $columnMap = [];
 
+        foreach ($myColumns as $alias => $column) {
+            $columnMap[$alias] = [null, $column];
+        }
+
         foreach ($this->getRelations() as $name => $relation) {
-            $prefix = $relation->getPrefix();
-
-            if ($prefix === null) {
-                continue;
-            }
-
-            $columns = $relation->getTarget()->getColumns();
-
-            foreach ($columns as $alias => $column) {
-                if (is_int($alias)) {
-                    $alias = $column;
-                }
-
-                $column = $relation->getTarget()->resolveColumn($column);
-
-                $alias = "{$prefix}{$alias}";
-
-                $columnMap[$alias] = [$name, $column];
+            foreach ($relation->getTarget()->getColumnsQualified($name, $relation->getColumnPrefix()) as $a => $c) {
+                $columnMap[$a] = [$name, $c];
             }
         }
 
@@ -412,7 +393,9 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
             $selectColumns = [];
 
             foreach ($this->selectColumns as $alias => $path) {
-                if ($path === null || $path instanceof Sql\Expression) {
+                if ($path === null
+                    || $path instanceof Sql\Expression
+                ) {
                     $selectColumns[$alias] = $path;
 
                     continue;
@@ -425,7 +408,9 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
 
                     list($relation, $column) = $columnMap[$path];
 
-                    $this->with($relation);
+                    if ($relation !== null) {
+                        $this->with($relation);
+                    }
 
                     $selectColumns[$alias] = $column;
 
@@ -439,7 +424,7 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
         } else {
             $autoColumns = true;
 
-            $selectColumns = $this->getColumnsQualified($tableAlias);
+            $selectColumns = $myColumns;
         }
 
         $select->columns($selectColumns);
@@ -447,7 +432,7 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
         $filter = $this->getFilter();
 
         if (! $filter->isEmpty()) {
-            $this->requireFilterColumns($filter);
+            $this->requireFilterColumns($filter, $columnMap);
 
             $where = $this->assembleFilter($filter);
 
@@ -466,7 +451,12 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
             }
 
             if ($autoColumns) {
-                $select->columns($relation->getTarget()->getColumnsQualified($relation->getName()));
+                $select->columns(
+                    $relation->getTarget()->getColumnsQualified(
+                        $relation->getName(),
+                        $relation->getColumnPrefix()
+                    )
+                );
             }
         }
 
@@ -555,156 +545,6 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
         $this->from[] = [$model, $columns];
 
         return $this;
-    }
-
-    /**
-     * @return  \Generator
-     */
-    public function query()
-    {
-        foreach ($this->getDb()->select($this->getSelect()) as $row) {
-            $model = (new static($row))
-                ->setDb($this->getDb());
-
-            yield $model;
-        }
-    }
-
-    /**
-     * @return  \Generator
-     */
-    public function getIterator()
-    {
-        return $this->query();
-    }
-
-    public function __call($name, $arguments)
-    {
-        if (! $this->hasRelation($name)) {
-            throw new \InvalidArgumentException("Relation '$name' does not exist");
-        }
-
-        if ($this->isNew()) {
-            throw new \RuntimeException("Can\'t fetch relational data for new models");
-        }
-
-        $relation = $this->relations[$name];
-
-        $target = clone $relation->getTarget();
-
-        $conditions = $relation->resolveConditions($this);
-
-        $conditionsTarget = $target->getTableAlias();
-
-        $select = $target->getSelectBase();
-
-        if ($relation instanceof Many) {
-            $viaTable = $relation->getVia();
-
-            if ($viaTable !== null) {
-                $intermediate = (new self())
-                    ->setTableName($viaTable);
-
-                $viaRelation = clone $relation;
-                $viaRelation
-                    ->setVia(null)
-                    ->setName($viaTable)
-                    ->setSubject($target)
-                    ->setTarget($intermediate);
-
-//                $target->with[$viaTable] = $viaRelation; // Lazy-loading alternative
-
-                foreach ($viaRelation->resolve() as list($targetTableAlias, $targetTableName, $condition)) {
-                    $select->join([$targetTableAlias => $targetTableName], $condition);
-                }
-
-                $conditionsTarget = $viaTable;
-            }
-        }
-
-        foreach ($conditions as $fk => $ck) {
-            $select->where(["$conditionsTarget.$fk = ?" => $this->getProperty($ck)]);
-        }
-
-        $target->setDb($this->getDb());
-
-        return $target;
-    }
-
-    /**
-     * @param   string      $column
-     * @param   int|string  $alias
-     *
-     * @return  array
-     */
-    protected function requireAndResolveColumn($column, $alias = null)
-    {
-        $tableAlias = $this->getTableAlias();
-
-        $dot = strrpos($column, '.');
-
-        if ($dot === false) {
-            $target = $this;
-        } else {
-            $path = $column;
-
-            $relation = substr($path, 0, $dot);
-
-            $column = substr($path, $dot + 1);
-
-            if ($relation === $tableAlias) {
-                $target = $this;
-            } else {
-                $this->with($relation);
-
-                $target = $this->with[$relation]->getTarget();
-            }
-        }
-
-        if (! $target->hasColumn($column)) {
-            throw new \RuntimeException(sprintf(
-                "Can't require column '%s' from table '%s' in model '%s'. Column not found.",
-                $column,
-                $target->getTableName(),
-                static::class
-            ));
-        }
-
-        if ($target->hasAlias($column)) {
-            if (is_int($alias)) {
-                $alias = $column;
-            }
-
-            $column = $target->resolveAlias($column);
-        } else {
-            $column = $target->resolveColumn($column);
-        }
-
-        return [$column, $alias];
-    }
-
-    protected function requireFilterColumns(Filter\Filter $filter)
-    {
-        if ($filter instanceof Filter\FilterExpression) {
-            if ($filter->getExpression() === '*') {
-                // Wildcard only filters are ignored so stop early here to avoid joining a table for nothing
-                return;
-            }
-
-            $this->requireAndResolveColumn($filter->getColumn());
-        } else {
-            /** @var Filter\FilterChain $filter */
-            foreach ($filter->filters() as $child) {
-                $this->requireFilterColumns($child);
-            }
-        }
-    }
-
-    private function assertRelationDoesNotYetExist($name)
-    {
-        if (isset($this->relations[$name])) {
-            throw new \InvalidArgumentException("Relation '$name' already exists");
-        }
     }
 
     /**
@@ -798,6 +638,172 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
             return ["($column != ? OR $column IS NULL)" => $expression];
         } else {
             return ["$column $operator ?" => $expression];
+        }
+    }
+
+    /**
+     * @return  \Generator
+     */
+    public function query()
+    {
+        foreach ($this->getDb()->select($this->getSelect()) as $row) {
+            $model = (new static($row))
+                ->setDb($this->getDb())
+                ->setNew(false);
+
+            yield $model;
+        }
+    }
+
+    /**
+     * @return  \Generator
+     */
+    public function getIterator()
+    {
+        return $this->query();
+    }
+
+    public function __call($name, $arguments)
+    {
+        if (! $this->hasRelation($name)) {
+            throw new \InvalidArgumentException("Relation '$name' does not exist");
+        }
+
+        if ($this->isNew()) {
+            throw new \RuntimeException("Can\'t fetch relational data for new models");
+        }
+
+        $relation = $this->relations[$name];
+
+        $target = clone $relation->getTarget();
+
+        $conditions = $relation->resolveConditions($this);
+
+        $conditionsTarget = $target->getTableName();
+
+        $select = $target->getSelectBase();
+
+        if ($relation instanceof Many) {
+            $viaTable = $relation->getVia();
+
+            if ($viaTable !== null) {
+                $intermediate = (new self())
+                    ->setTableName($viaTable);
+
+                $viaRelation = clone $relation;
+                $viaRelation
+                    ->setVia(null)
+                    ->setName($viaTable)
+                    ->setSubject($target)
+                    ->setTarget($intermediate);
+
+//                $target->with[$viaTable] = $viaRelation; // Lazy-loading alternative
+
+                foreach ($viaRelation->resolve() as list($targetTableAlias, $targetTableName, $condition)) {
+                    $select->join([$targetTableAlias => $targetTableName], $condition);
+                }
+
+                $conditionsTarget = $viaTable;
+            }
+        }
+
+        foreach ($conditions as $fk => $ck) {
+            $select->where(["$conditionsTarget.$fk = ?" => $this->getProperty($ck)]);
+        }
+
+        $target->setDb($this->getDb());
+
+        return $target;
+    }
+
+    /**
+     * @param   string      $column
+     * @param   int|string  $alias
+     *
+     * @return  array
+     */
+    protected function requireAndResolveColumn($column, $alias = null)
+    {
+        $tableName = $this->getTableName();
+
+        $dot = strrpos($column, '.');
+
+        if ($dot === false) {
+            $target = $this;
+        } else {
+            $path = $column;
+
+            $relation = substr($path, 0, $dot);
+
+            $column = substr($path, $dot + 1);
+
+            if ($relation === $tableName) {
+                $target = $this;
+            } else {
+                $this->with($relation);
+
+                $target = $this->with[$relation]->getTarget();
+            }
+        }
+
+        if (! $target->hasColumn($column)) {
+            throw new \RuntimeException(sprintf(
+                "Can't require column '%s' from table '%s' in model '%s'. Column not found.",
+                $column,
+                $target->getTableName(),
+                static::class
+            ));
+        }
+
+        if ($target->hasAlias($column)) {
+            if (is_int($alias)) {
+                $alias = $column;
+            }
+
+            $column = $target->getAlias($column);
+        } else {
+            if (is_int($alias)) {
+                $alias = $target->qualifyAlias($column);
+            }
+            $column = $target->qualifyColumn($column);
+        }
+
+        return [$column, $alias];
+    }
+
+    protected function requireFilterColumns(Filter\Filter $filter, array $columnMap)
+    {
+        if ($filter instanceof Filter\FilterExpression) {
+            if ($filter->getExpression() === '*') {
+                // Wildcard only filters are ignored so stop early here to avoid joining a table for nothing
+                return;
+            }
+
+            $alias = $filter->getColumn();
+
+            if (isset($columnMap[$alias])) {
+                list($relation, $column) = $columnMap[$alias];
+
+                if ($relation !== null) {
+                    $this->with($relation);
+                }
+
+                $filter->setColumn($column);
+            } else {
+                $this->requireAndResolveColumn($alias);
+            }
+        } else {
+            /** @var Filter\FilterChain $filter */
+            foreach ($filter->filters() as $child) {
+                $this->requireFilterColumns($child, $columnMap);
+            }
+        }
+    }
+
+    private function assertRelationDoesNotYetExist($name)
+    {
+        if (isset($this->relations[$name])) {
+            throw new \InvalidArgumentException("Relation '$name' already exists");
         }
     }
 
