@@ -169,6 +169,10 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
                 $column = $tableName . '.' . $column;
             } else {
                 $alias = $columnPrefix . '_' . $alias;
+
+                if (strpos($column, '.') === false && $column[0] !== '(') {
+                    $column = $tableName . '.' . $column;
+                }
             }
 
             $qualified[$alias] = $column;
@@ -809,6 +813,7 @@ class Model implements \ArrayAccess, \IteratorAggregate, FiltersInterface
 
     public function dump()
     {
-        echo '<pre>' . $this->getDb()->getQueryBuilder()->assembleSelect($this->getSelect())[0] . '</pre>';die;
+        $assembled = $this->getDb()->getQueryBuilder()->assembleSelect($this->getSelect());
+        echo '<pre>' . $assembled[0] . '</pre>';var_export($assembled[1]);die;
     }
 }
